@@ -10,9 +10,9 @@ sys.path.insert(
 )
 
 from allennlp.common.util import JsonDict
-from allennlp.semparse.domain_languages import NlvrLanguage
-from allennlp.semparse.domain_languages.nlvr_language import Box
-from allennlp.semparse import ActionSpaceWalker
+from allennlp_semparse.domain_languages import NlvrLanguage
+from allennlp_semparse.domain_languages.nlvr_language import Box
+from allennlp_semparse import ActionSpaceWalker
 
 
 def read_json_line(line: str) -> Tuple[str, str, List[JsonDict], List[str]]:
@@ -36,6 +36,7 @@ def process_data(
     max_num_logical_forms: int,
     ignore_agenda: bool,
     write_sequences: bool,
+    prune_data: bool,
 ) -> None:
     """
     Reads an NLVR dataset and returns a JSON representation containing sentences, labels, correct and
@@ -47,6 +48,7 @@ def process_data(
     # We can instantiate the ``ActionSpaceWalker`` with any world because the action space is the
     # same for all the ``NlvrLanguage`` objects. It is just the execution that differs.
     walker = ActionSpaceWalker(NlvrLanguage({}), max_path_length=max_path_length)
+    examples_w_correct_logical_forms, max_num_correct_logical_forms, total_num_correct_logical_forms = 0, 0, 0
     for line in open(input_file):
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
         worlds = []
@@ -80,6 +82,12 @@ def process_data(
                 and len(incorrect_logical_forms) >= max_num_logical_forms
             ):
                 break
+        if correct_logical_forms:
+            examples_w_correct_logical_forms += 1
+            max_num_correct_logical_forms = max(max_num_correct_logical_forms, len(correct_logical_forms))
+            total_num_correct_logical_forms += len(correct_logical_forms)
+        if prune_data and len(correct_logical_forms) == 0:
+            continue
         if write_sequences:
             correct_sequences = [
                 worlds[0].logical_form_to_action_sequence(logical_form)
@@ -110,6 +118,12 @@ def process_data(
                     "labels": label_strings,
                 }
             )
+
+    avg_num_correct_logical_forms = float(total_num_correct_logical_forms)/examples_w_correct_logical_forms
+    print("Num of examples w/ correct logical forms: {}".format(examples_w_correct_logical_forms))
+    print("Max num of correct logical forms for an example: {}".format(max_num_correct_logical_forms))
+    print("Avg num of correct logical forms per example: {}".format(avg_num_correct_logical_forms))
+    print("Writing {} instances to: {}".format(len(processed_data), output_file))
     with open(output_file, "w") as outfile:
         for instance_processed_data in processed_data:
             json.dump(instance_processed_data, outfile)
@@ -126,7 +140,7 @@ if __name__ == "__main__":
         type=int,
         dest="max_path_length",
         help="Maximum path length for logical forms",
-        default=12,
+        default=10,
     )
     parser.add_argument(
         "--max-num-logical-forms",
@@ -151,7 +165,14 @@ if __name__ == "__main__":
         "in the NlvrDatasetReader.",
         action="store_true",
     )
+    parser.add_argument(
+        "--prune-data",
+        dest="prune_data",
+        help="Should we only keep examples for which at least one correct logical-form is found?",
+        action="store_true",
+    )
     args = parser.parse_args()
+    print(args)
     process_data(
         args.input,
         args.output,
@@ -159,4 +180,5 @@ if __name__ == "__main__":
         args.max_num_logical_forms,
         args.ignore_agenda,
         args.write_sequences,
+        args.prune_data
     )

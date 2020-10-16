@@ -248,6 +248,9 @@ class NlvrSemanticParser(Model):
             zip(best_actions, debug_infos)
         ):
             instance_action_info = []
+            if not predicted_actions:
+                # No program is decoded for this instance
+                continue
             for predicted_action, action_debug_info in zip(predicted_actions[0], debug_info):
                 action_info = {}
                 action_info["predicted_action"] = predicted_action

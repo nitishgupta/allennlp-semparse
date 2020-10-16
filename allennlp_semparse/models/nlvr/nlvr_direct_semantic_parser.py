@@ -148,27 +148,38 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 if i in best_final_states:
                     best_action_indices = [best_final_states[i][0].action_history[0]]
                     best_action_sequences[i] = best_action_indices
-            batch_action_strings = self._get_action_strings(actions, best_action_sequences)
-            batch_denotations = self._get_denotations(batch_action_strings, worlds)
-            if target_action_sequences is not None:
-                self._update_metrics(
+            # Action-string sequence, for each program, for each instance. If no program is decoded for an instance,
+            # the corresponding instance's List[List[str]] would just be an empty []
+            batch_action_strings: List[List[List[str]]] = self._get_action_strings(actions, best_action_sequences)
+            # Denotation, for each world, for each program, for each instance. Similarly, if no program is decoded,
+            # the corresponding instance's List[List[str]] would just be an empty []
+            batch_denotations: List[List[List[str]]] = self._get_denotations(batch_action_strings, worlds)
+            batch_sequence_is_correct = None
+            if label_strings is not None:
+                # Prediction correct/incorrect, for each world, for each instance
+                batch_sequence_is_correct: List[List[bool]] = self._update_metrics(
                     action_strings=batch_action_strings, worlds=worlds, label_strings=label_strings
                 )
-            else:
-                if metadata is not None:
-                    outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
-                outputs["debug_info"] = []
-                for i in range(batch_size):
+            if metadata is not None:
+                outputs["sentence"] = [x["sentence"] for x in metadata]
+                outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
+            outputs["debug_info"] = []
+            for i in range(batch_size):
+                if i in best_final_states:
                     outputs["debug_info"].append(
                         best_final_states[i][0].debug_info[0]
                     )  # type: ignore
-                outputs["best_action_strings"] = batch_action_strings
-                outputs["denotations"] = batch_denotations
-                action_mapping = {}
-                for batch_index, batch_actions in enumerate(actions):
-                    for action_index, action in enumerate(batch_actions):
-                        action_mapping[(batch_index, action_index)] = action[0]
-                outputs["action_mapping"] = action_mapping
+                else:
+                    outputs["debug_info"].append([])
+            outputs["best_action_strings"] = batch_action_strings
+            outputs["denotations"] = batch_denotations
+            action_mapping = {}
+            for batch_index, batch_actions in enumerate(actions):
+                for action_index, action in enumerate(batch_actions):
+                    action_mapping[(batch_index, action_index)] = action[0]
+            outputs["action_mapping"] = action_mapping
+            if batch_sequence_is_correct:
+                outputs["sequence_is_correct"] = batch_sequence_is_correct
         return outputs
 
     def _update_metrics(
@@ -180,6 +191,7 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
         # TODO(pradeep): Move this to the base class.
         # TODO(pradeep): Using only the best decoded sequence. Define metrics for top-k sequences?
         batch_size = len(worlds)
+        batch_sequence_is_correct = []
         for i in range(batch_size):
             instance_action_strings = action_strings[i]
             sequence_is_correct = [False]
@@ -190,9 +202,17 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                 sequence_is_correct = self._check_denotation(
                     instance_action_strings[0], instance_label_strings, instance_worlds
                 )
+            else:
+                # No program was decoded for this instance, therefore, mark denotation is incorrect for all worlds
+                instance_worlds = worlds[i]
+                # world can be none in case of padding
+                num_worlds = sum([1 for world in instance_worlds if world is not None])
+                sequence_is_correct = [False] * num_worlds
             for correct_in_world in sequence_is_correct:
                 self._denotation_accuracy(1 if correct_in_world else 0)
             self._consistency(1 if all(sequence_is_correct) else 0)
+            batch_sequence_is_correct.append(sequence_is_correct)
+        return batch_sequence_is_correct
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:

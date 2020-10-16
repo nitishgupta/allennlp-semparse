@@ -89,6 +89,7 @@ class NlvrDatasetReader(DatasetReader):
         nonterminal_indexers: Dict[str, TokenIndexer] = None,
         terminal_indexers: Dict[str, TokenIndexer] = None,
         output_agendas: bool = True,
+        mode: str = "test",
     ) -> None:
         super().__init__(lazy)
         self._tokenizer = tokenizer or SpacyTokenizer()
@@ -102,6 +103,8 @@ class NlvrDatasetReader(DatasetReader):
             "tokens": SingleIdTokenIndexer("rule_labels")
         }
         self._output_agendas = output_agendas
+        self._mode = mode
+        assert self._mode in ["train", "test"]
 
     @overrides
     def _read(self, file_path: str):
@@ -183,7 +186,8 @@ class NlvrDatasetReader(DatasetReader):
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
         worlds_field = ListField([MetadataField(world) for world in worlds])
-        metadata: Dict[str, Any] = {"sentence_tokens": [x.text for x in tokenized_sentence]}
+        metadata: Dict[str, Any] = {"sentence_tokens": [x.text for x in tokenized_sentence],
+                                    "sentence": sentence}
         fields: Dict[str, Field] = {
             "sentence": sentence_field,
             "worlds": worlds_field,
@@ -218,6 +222,13 @@ class NlvrDatasetReader(DatasetReader):
                 [IndexField(instance_action_ids[action], action_field) for action in agenda]
             )
             fields["agenda"] = agenda_field
+        elif self._mode == "train":
+            # TODO(nitish): Ask Pradeep what happens if no target_sequences are found
+            print("NO TARGET SEQUENCES in Train mode; adding empty target sequence")
+            return None
+            # index_fields = ListField([IndexField(-1, action_field)])
+            # fields["target_action_sequences"] = ListField([index_fields])
+
         if labels:
             labels_field = ListField(
                 [LabelField(label, label_namespace="denotations") for label in labels]
