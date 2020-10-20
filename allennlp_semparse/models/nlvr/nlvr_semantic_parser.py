@@ -250,6 +250,7 @@ class NlvrSemanticParser(Model):
             instance_action_info = []
             if not predicted_actions:
                 # No program is decoded for this instance
+                batch_action_info.append(instance_action_info)
                 continue
             for predicted_action, action_debug_info in zip(predicted_actions[0], debug_info):
                 action_info = {}
@@ -267,6 +268,7 @@ class NlvrSemanticParser(Model):
                 action_info["question_attention"] = action_debug_info.get("question_attention", [])
                 instance_action_info.append(action_info)
             batch_action_info.append(instance_action_info)
+
         output_dict["predicted_actions"] = batch_action_info
         output_dict["logical_form"] = logical_forms
         return output_dict

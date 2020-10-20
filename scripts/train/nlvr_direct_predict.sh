@@ -29,15 +29,15 @@ allennlp predict --output-file ${OUTPUT_PREDICTION_PATH} \
                  --cuda-device ${CUDA} \
                  --predictor ${PREDICTOR} \
                  --include-package allennlp_semparse \
-                 --overrides "{"model": {"max_decoding_steps": 14}}" \
+                 --overrides "{"model": {"max_decoding_steps": 10}}" \
                  ${MODEL_TAR_GZ} ${DEV_DATA}
 
 
-allennlp evaluate --output-file ${OUTPUT_METRICS_PATH} \
-                  --cuda-device ${CUDA} \
-                  --include-package allennlp_semparse \
-                  --overrides "{"model": {"max_decoding_steps": 14}}" \
-                  ${MODEL_TAR_GZ} ${DEV_DATA}
+#allennlp evaluate --output-file ${OUTPUT_METRICS_PATH} \
+#                  --cuda-device ${CUDA} \
+#                  --include-package allennlp_semparse \
+#                  --overrides "{"model": {"max_decoding_steps": 14}}" \
+#                  ${MODEL_TAR_GZ} ${DEV_DATA}
 
 
 echo -e "Metrics written to: ${OUTPUT_METRICS_PATH}"

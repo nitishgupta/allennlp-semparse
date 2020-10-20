@@ -7,6 +7,23 @@ from allennlp.data import Instance
 from allennlp.predictors.predictor import Predictor
 
 
+def round_all(stuff, prec):
+    """ Round all the number elems in nested stuff. """
+    if isinstance(stuff, list):
+        return [round_all(x, prec) for x in stuff]
+    if isinstance(stuff, tuple):
+        return tuple(round_all(x, prec) for x in stuff)
+    if isinstance(stuff, float):
+        return round(float(stuff), prec)
+    if isinstance(stuff, dict):
+        d = {}
+        for k, v in stuff.items():
+            d[k] = round(v, prec)
+        return d
+    else:
+        return stuff
+
+
 @Predictor.register("nlvr-parser")
 class NlvrParserPredictor(Predictor):
     @overrides
@@ -47,6 +64,15 @@ class NlvrParserPredictor(Predictor):
             return json.dumps(outputs) + "\n"
 
 
+def get_token_attentions_string(tokens, attentions):
+    """Make a human-readable string of tokens and their predicted attentions."""
+    output_str = ""
+    attentions = attentions[:len(tokens)]   # attention can be padded to a longer length
+    for token, attn in zip(tokens, attentions):
+        output_str += f"{token}({str(attn)}) "
+    return output_str.strip()
+
+
 @Predictor.register("nlvr-parser-visualize")
 class NlvrParserPredictor(NlvrParserPredictor):
     @overrides
@@ -78,7 +104,22 @@ class NlvrParserPredictor(NlvrParserPredictor):
     def dump_line(self, outputs: JsonDict) -> str:
         identifier = outputs.get("identifier", "N/A")
         sentence = outputs["sentence"]
+        sentence_tokens = outputs["sentence_tokens"]
         best_action_strings = outputs["best_action_strings"]
+        debug_info = outputs["debug_info"]
+        # List of actions; each is a dict with keys: "predicted_action", "considered_actions", "action_probabilities",
+        # "question_attention". List is empty in case a parse is not decoded
+        predicted_actions = outputs["predicted_actions"]
+        action_strings = [a["predicted_action"] for a in predicted_actions]
+        question_attentions = [a["question_attention"] for a in predicted_actions]
+        question_attentions = round_all(question_attentions, 3)
+
+        action_w_attention = []
+        for action, attentions in zip(action_strings, question_attentions):
+            utterance_attention_string = get_token_attentions_string(sentence_tokens, attentions)
+            action_w_attention.append(action)
+            action_w_attention.append(utterance_attention_string)
+
         logical_form = outputs["logical_form"]
         denotations = outputs["denotations"]
         sequence_is_correct = outputs.get("sequence_is_correct", None)
@@ -92,6 +133,7 @@ class NlvrParserPredictor(NlvrParserPredictor):
             "identifier": identifier,
             "sentence": sentence,
             "best_action_strings": best_action_strings,
+            "action_w_attention": action_w_attention,
             "best_logical_forms": logical_form,
             "denotations": denotations,
             "sequence_is_correct": sequence_is_correct,

@@ -30,6 +30,33 @@ def get_ngrams(tokens, n) -> List:
     return output
 
 
+def abstract_color_shape_number(sentence):
+    sentence = sentence.replace("blue", "COLOR")
+    sentence = sentence.replace("black", "COLOR")
+    sentence = sentence.replace("yellow", "COLOR")
+
+    sentence = sentence.replace("triangles", "SHAPE")
+    sentence = sentence.replace("squares", "SHAPE")
+    sentence = sentence.replace("circles", "SHAPE")
+
+    sentence = sentence.replace("triangle", "SHAPE")
+    sentence = sentence.replace("square", "SHAPE")
+    sentence = sentence.replace("circle", "SHAPE")
+
+    sentence = sentence.replace("blocks", "OBJECT")
+    sentence = sentence.replace("objects", "OBJECT")
+
+    sentence = sentence.replace("block", "OBJECT")
+    sentence = sentence.replace("object", "OBJECT")
+
+    numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9",
+               "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+    for num in numbers:
+        sentence = sentence.replace(num, "NUMBER")
+
+    return sentence
+
+
 def ngram_stats(
     input_file: str,
     output_file: str,
@@ -46,6 +73,9 @@ def ngram_stats(
         sentence = sentence.replace(".", " .")
         sentence = sentence.replace("?", " ?")
         sentence = sentence.replace(",", " ,")
+
+        sentence = abstract_color_shape_number(sentence)
+
         tokens = sentence.split(" ")
         for n in range(min_ngram_size, max_ngram_size+1):
             ngrams = get_ngrams(tokens, n)
@@ -57,7 +87,7 @@ def ngram_stats(
 
     # Sorting dict by number of common-sentences
     ngram_dict = {k: v for k, v in sorted(ngram_dict.items(), key=lambda x: len(x[1]), reverse=True)}
-    ngram_dict = {k: v for k, v in ngram_dict.items() if len(v) > 1}
+    ngram_dict = {k: v for k, v in ngram_dict.items() if len(v) >= 5}
     print("Number of ngrams: {}".format(len(ngram_dict)))
 
     with open(output_file, "w") as outfile:
