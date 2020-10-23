@@ -561,20 +561,32 @@ class NlvrLanguageFuncComposition(DomainLanguage):
     def object_shape_count_lesser_equals(self, count: int, objects: Set[Object]) -> bool:
         return len({obj.shape for obj in objects}) <= count
 
+    # @predicate
+    # def box_filter(self, boxes: Set[Box], filter_function: Callable[[Set[Box]], bool]) -> Set[Box]:
+    #     # Wrapping a single box in a {set} to make the function call type-consistent
+    #     filtered_boxes = {box for box in boxes if filter_function({box}) is True}
+    #     return filtered_boxes
+
     @predicate
-    def box_filter(self, boxes: Set[Box], filter_function: Callable[[Set[Box]], bool]) -> Set[Box]:
-        # Wrapping a single box in a {set} to make the function call type-consistent
-        filtered_boxes = {box for box in boxes if filter_function({box}) is True}
+    def box_filter(
+        self, boxes: Set[Box], filter_function: Callable[[Set[Object]], bool]
+    ) -> Set[Box]:
+        filtered_boxes = set()
+        for box in boxes:
+            # Wrapping a single box in a {set}
+            objects = self.object_in_box(box={box})
+            if filter_function(objects):
+                filtered_boxes.add(box)
         return filtered_boxes
 
     @predicate
     def box_filter_and(
         self,
-        box_filter_1: Callable[[Set[Box]], bool],
-        box_filter_2: Callable[[Set[Box]], bool],
-    ) -> Callable[[Set[Box]], bool]:
-        def new_box_filter(boxes: Set[Box]) -> bool:
-            return box_filter_1(boxes) and box_filter_2(boxes)
+        box_filter_1: Callable[[Set[Object]], bool],
+        box_filter_2: Callable[[Set[Object]], bool],
+    ) -> Callable[[Set[Object]], bool]:
+        def new_box_filter(objects: Set[Object]) -> bool:
+            return box_filter_1(objects) and box_filter_2(objects)
 
         return new_box_filter
 
