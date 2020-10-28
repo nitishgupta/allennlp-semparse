@@ -1,15 +1,18 @@
+local utils = import 'utils.libsonnet';
 local train_data = std.extVar("TRAIN_DATA");
 local dev_data = std.extVar("DEV_DATA");
 
+local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
+
 {
   "dataset_reader": {
-    "type": "nlvr",
+    "type": "nlvr_v2",
     "lazy": false,
     "output_agendas": false,
     "mode": "train"
   },
   "validation_dataset_reader": {
-    "type": "nlvr",
+    "type": "nlvr_v2",
     "lazy": false,
     "output_agendas": false,
     "mode": "test"
@@ -21,7 +24,7 @@ local dev_data = std.extVar("DEV_DATA");
   "train_data_path": train_data,
   "validation_data_path": dev_data,
   "model": {
-    "type": "nlvr_direct_parser",
+    "type": "nlvr_mml_parser",
     "sentence_embedder": {
       "token_embedders": {
         "tokens": {
@@ -42,7 +45,7 @@ local dev_data = std.extVar("DEV_DATA");
     "decoder_beam_search": {
       "beam_size": 10
     },
-    "max_decoding_steps": 14,
+    "max_decoding_steps": maximum_decoding_steps,
     "attention": {"type": "dot_product"},
     "dropout": 0.2
   },
@@ -63,5 +66,9 @@ local dev_data = std.extVar("DEV_DATA");
       "type": "adam",
       "lr": 0.005
     }
-  }
+  },
+
+  "random_seed": utils.parse_number(std.extVar("SEED")),
+  "numpy_seed": utils.parse_number(std.extVar("SEED")),
+  "pytorch_seed": utils.parse_number(std.extVar("SEED"))
 }

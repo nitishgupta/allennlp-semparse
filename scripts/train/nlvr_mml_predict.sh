@@ -15,7 +15,7 @@ CONFIGFILE=training_config/nlvr_direct_parser.jsonnet
 export DEV_DATA=../../nfs2_nitishg/data/nlvr/processed/dev_grouped.json
 
 # MODEL PATH
-SERIALIZATION_DIR=../../nfs2_nitishg/checkpoints/mml_parser/nlvr/agenda_true_MDS-14
+SERIALIZATION_DIR=../../nfs2_nitishg/checkpoints/mml_parser/nlvr/agenda_v5_partial_False/MDS_14-MMLCands
 MODEL_TAR_GZ=${SERIALIZATION_DIR}/model.tar.gz
 
 mkdir ${SERIALIZATION_DIR}/predictions
@@ -29,15 +29,15 @@ allennlp predict --output-file ${OUTPUT_PREDICTION_PATH} \
                  --cuda-device ${CUDA} \
                  --predictor ${PREDICTOR} \
                  --include-package allennlp_semparse \
-                 --overrides "{"model": {"max_decoding_steps": 10}}" \
+                 --overrides "{"model": {"max_decoding_steps": 20}}" \
                  ${MODEL_TAR_GZ} ${DEV_DATA}
 
 
-#allennlp evaluate --output-file ${OUTPUT_METRICS_PATH} \
-#                  --cuda-device ${CUDA} \
-#                  --include-package allennlp_semparse \
-#                  --overrides "{"model": {"max_decoding_steps": 14}}" \
-#                  ${MODEL_TAR_GZ} ${DEV_DATA}
+allennlp evaluate --output-file ${OUTPUT_METRICS_PATH} \
+                  --cuda-device ${CUDA} \
+                  --include-package allennlp_semparse \
+                  --overrides "{"model": {"max_decoding_steps": 14}}" \
+                  ${MODEL_TAR_GZ} ${DEV_DATA}
 
 
 echo -e "Metrics written to: ${OUTPUT_METRICS_PATH}"

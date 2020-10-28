@@ -9,20 +9,24 @@ export MKL_NUM_THREADS=4
 export CUDA=0
 
 INCLUDE_PACKAGE=allennlp_semparse
-CONFIGFILE=training_config/nlvr_direct_parser.jsonnet
+CONFIGFILE=training_config/nlvr_mml_parser.jsonnet
 
 # DATA PATH
-export TRAIN_DATA=../../nfs2_nitishg/data/nlvr/processed/train_grouped_lfs.json  # _wagenda.json
+export DATADIR=agenda_v2SC_partial_False
+export TRAIN_DATA=../../nfs2_nitishg/data/nlvr/processed/${DATADIR}/train_grouped.json
+# train_grouped.json
 export DEV_DATA=../../nfs2_nitishg/data/nlvr/processed/dev_grouped.json
 
 # HYPER-PARAMETERS
-AGENDA=false
+export MDS=18
+
+export SEED=42
 
 # SERIALIZATION PATH
 CHECKPOINT_ROOT=../../nfs2_nitishg/checkpoints
-MODEL_DIR=mml_parser/nlvr
-PARAMETERS=agenda_${AGENDA}
-SERIALIZATION_DIR=${CHECKPOINT_ROOT}/${MODEL_DIR}/${PARAMETERS}_MDS-12
+MODEL_DIR=mml_parser/nlvr/${DATADIR}
+PARAMETERS=MDS_${MDS}/S_${SEED}
+SERIALIZATION_DIR=${CHECKPOINT_ROOT}/${MODEL_DIR}/${PARAMETERS}
 
 # SERIALIZATION_DIR=${CHECKPOINT_ROOT}/test
 

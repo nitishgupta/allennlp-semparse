@@ -106,6 +106,8 @@ class NlvrParserPredictor(NlvrParserPredictor):
         sentence = outputs["sentence"]
         sentence_tokens = outputs["sentence_tokens"]
         best_action_strings = outputs["best_action_strings"]
+        if best_action_strings:
+            best_action_strings = best_action_strings[0]
         debug_info = outputs["debug_info"]
         # List of actions; each is a dict with keys: "predicted_action", "considered_actions", "action_probabilities",
         # "question_attention". List is empty in case a parse is not decoded
@@ -120,8 +122,13 @@ class NlvrParserPredictor(NlvrParserPredictor):
             action_w_attention.append(action)
             action_w_attention.append(utterance_attention_string)
 
+        label_strings = outputs["label_strings"]
+        # All logical-forms in the beam
         logical_form = outputs["logical_form"]
         denotations = outputs["denotations"]
+        # Taking denotations for top-scoring program
+        if denotations:
+            denotations = denotations[0]
         sequence_is_correct = outputs.get("sequence_is_correct", None)
 
         consistent = None
@@ -133,8 +140,9 @@ class NlvrParserPredictor(NlvrParserPredictor):
             "identifier": identifier,
             "sentence": sentence,
             "best_action_strings": best_action_strings,
-            "action_w_attention": action_w_attention,
+            # "action_w_attention": action_w_attention,
             "best_logical_forms": logical_form,
+            "label_strings": label_strings,
             "denotations": denotations,
             "sequence_is_correct": sequence_is_correct,
             "consistent": consistent,

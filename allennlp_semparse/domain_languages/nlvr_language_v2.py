@@ -145,40 +145,50 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         """
         agenda = []
         sentence = sentence.lower()
+
         if sentence.startswith("there is a box") or sentence.startswith("there is a tower "):
             agenda.append(self.terminal_productions["box_exists"])
+            agenda.append(self.terminal_productions["box_filter"])
+            agenda.append(self.terminal_productions["all_boxes"])
+        # # TODO(nitish): v3, v4, v5- added this elif; v5 added the "of a box" condition
+        # elif ("box" in sentence or "tower" in sentence) and not ("of a box" in sentence or "of a tower" in sentence):
+        #     agenda.append(self.terminal_productions["box_filter"])
+        #     agenda.append(self.terminal_productions["all_boxes"])
         elif sentence.startswith("there is a "):
             agenda.append(self.terminal_productions["object_exists"])
 
-        if "<Set[Box]:bool> -> box_exists" not in agenda:
-            # These are object filters and do not apply if we have a box_exists at the top.
-            if "touch" in sentence:
-                if "top" in sentence:
-                    agenda.append(self.terminal_productions["touch_top"])
-                elif "bottom" in sentence or "base" in sentence:
-                    agenda.append(self.terminal_productions["touch_bottom"])
-                elif "corner" in sentence:
-                    agenda.append(self.terminal_productions["touch_corner"])
-                elif "right" in sentence:
-                    agenda.append(self.terminal_productions["touch_right"])
-                elif "left" in sentence:
-                    agenda.append(self.terminal_productions["touch_left"])
-                elif "wall" in sentence or "edge" in sentence:
-                    agenda.append(self.terminal_productions["touch_wall"])
-                else:
-                    agenda.append(self.terminal_productions["touch_object"])
+        # TODO(nitish): v2, v3, v4, v5 - removed the if-condition; object-filters can be used inside box_filter
+        # if "<Set[Box]:bool> -> box_exists" not in agenda:
+        # These are object filters and do not apply if we have a box_exists at the top.
+        if "touch" in sentence:
+            if "top" in sentence:
+                agenda.append(self.terminal_productions["touch_top"])
+            elif "bottom" in sentence or "base" in sentence:
+                agenda.append(self.terminal_productions["touch_bottom"])
+            elif "corner" in sentence:
+                agenda.append(self.terminal_productions["touch_corner"])
+            elif "right" in sentence:
+                agenda.append(self.terminal_productions["touch_right"])
+            elif "left" in sentence:
+                agenda.append(self.terminal_productions["touch_left"])
+            elif "wall" in sentence or "edge" in sentence:
+                agenda.append(self.terminal_productions["touch_wall"])
             else:
-                # The words "top" and "bottom" may be referring to top and bottom blocks in a tower.
-                if "top" in sentence:
-                    agenda.append(self.terminal_productions["top"])
-                elif "bottom" in sentence or "base" in sentence:
-                    agenda.append(self.terminal_productions["bottom"])
+                agenda.append(self.terminal_productions["touch_object"])
+        else:
+            # The words "top" and "bottom" may be referring to top and bottom blocks in a tower.
+            if "top" in sentence:
+                agenda.append(self.terminal_productions["top"])
+            elif "bottom" in sentence or "base" in sentence:
+                agenda.append(self.terminal_productions["bottom"])
 
-            if " not " in sentence:
-                agenda.append(self.terminal_productions["negate_filter"])
+        if " not " in sentence:
+            agenda.append(self.terminal_productions["negate_filter"])
 
         if " contains " in sentence or " has " in sentence:
             agenda.append(self.terminal_productions["all_boxes"])
+            agenda.append(self.terminal_productions["box_filter"])
+
         # This takes care of shapes, colors, top, bottom, big, small etc.
         for constant, production in self.terminal_productions.items():
             # TODO(pradeep): Deal with constant names with underscores.
@@ -186,26 +196,28 @@ class NlvrLanguageFuncComposition(DomainLanguage):
                 # We already dealt with top, bottom, touch_top and touch_bottom above.
                 continue
             if constant in sentence:
-                if (
-                    "<Set[Object]:Set[Object]> ->" in production
-                    and "<Set[Box]:bool> -> box_exists" in agenda
-                ):
-                    if constant in ["square", "circle", "triangle"]:
-                        agenda.append(self.terminal_productions[f"shape_{constant}"])
-                    elif constant in ["yellow", "blue", "black"]:
-                        agenda.append(self.terminal_productions[f"color_{constant}"])
-                    else:
-                        continue
-                else:
-                    agenda.append(production)
-        # TODO (pradeep): Rules for "member_*" productions ("tower" or "box" followed by a color,
-        # shape or number...)
+                # TODO(nitish) v4,v5 -- choose `yellow()` instead of `color_yellow` action
+                agenda.append(production)
+                # if (
+                #     "<Set[Object]:Set[Object]> ->" in production
+                #     and "<Set[Box]:bool> -> box_exists" in agenda
+                # ):
+                #     if constant in ["square", "circle", "triangle"]:
+                #         agenda.append(self.terminal_productions[f"shape_{constant}"])
+                #     elif constant in ["yellow", "blue", "black"]:
+                #         agenda.append(self.terminal_productions[f"color_{constant}"])
+                #     else:
+                #         continue
+                # else:
+                #     agenda.append(production)
+
         number_productions = self._get_number_productions(sentence)
         for production in number_productions:
             agenda.append(production)
         if not agenda:
             # None of the rules above was triggered!
             if "box" in sentence:
+                agenda.append(self.terminal_productions["box_filter"])
                 agenda.append(self.terminal_productions["all_boxes"])
             else:
                 agenda.append(self.terminal_productions["all_objects"])
@@ -561,12 +573,6 @@ class NlvrLanguageFuncComposition(DomainLanguage):
     def object_shape_count_lesser_equals(self, count: int, objects: Set[Object]) -> bool:
         return len({obj.shape for obj in objects}) <= count
 
-    # @predicate
-    # def box_filter(self, boxes: Set[Box], filter_function: Callable[[Set[Box]], bool]) -> Set[Box]:
-    #     # Wrapping a single box in a {set} to make the function call type-consistent
-    #     filtered_boxes = {box for box in boxes if filter_function({box}) is True}
-    #     return filtered_boxes
-
     @predicate
     def box_filter(
         self, boxes: Set[Box], filter_function: Callable[[Set[Object]], bool]
@@ -590,107 +596,6 @@ class NlvrLanguageFuncComposition(DomainLanguage):
 
         return new_box_filter
 
-    """Can be accomplished using filter_function == object_count_COND(count)(object_in_box)"""
-    # @predicate
-    # def member_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.objects) == count}
-    #
-    # @predicate
-    # def member_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.objects) != count}
-    #
-    # @predicate
-    # def member_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.objects) > count}
-    #
-    # @predicate
-    # def member_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.objects) >= count}
-    #
-    # @predicate
-    # def member_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.objects) < count}
-    #
-    # @predicate
-    # def member_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.objects) <= count}
-
-    """Can be accomplished using filter_function == object_color_count_COND(count)(object_in_box)"""
-    # @predicate
-    # def member_color_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.colors) == count}
-    #
-    # @predicate
-    # def member_color_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.colors) != count}
-    #
-    # @predicate
-    # def member_color_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.colors) > count}
-    #
-    # @predicate
-    # def member_color_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.colors) >= count}
-    #
-    # @predicate
-    # def member_color_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.colors) < count}
-    #
-    # @predicate
-    # def member_color_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.colors) <= count}
-
-    """Can be accomplished using filter_function == object_shape_count_COND(count)(object_in_box)"""
-    # @predicate
-    # def member_shape_count_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.shapes) == count}
-    #
-    # @predicate
-    # def member_shape_count_not_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.shapes) != count}
-    #
-    # @predicate
-    # def member_shape_count_greater(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.shapes) > count}
-    #
-    # @predicate
-    # def member_shape_count_greater_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.shapes) >= count}
-    #
-    # @predicate
-    # def member_shape_count_lesser(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.shapes) < count}
-    #
-    # @predicate
-    # def member_shape_count_lesser_equals(self, boxes: Set[Box], count: int) -> Set[Box]:
-    #     return {box for box in boxes if len(box.shapes) <= count}
-
-    """Can be accomplished using filter_function == object_color_COND_equals(color)(object_in_box)"""
-    # @predicate
-    # def member_color_all_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-    #     return {box for box in boxes if self.object_color_all_equals(box.objects, color)}
-    #
-    # @predicate
-    # def member_color_any_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-    #     return {box for box in boxes if self.object_color_any_equals(box.objects, color)}
-    #
-    # @predicate
-    # def member_color_none_equals(self, boxes: Set[Box], color: Color) -> Set[Box]:
-    #     return {box for box in boxes if self.object_color_none_equals(box.objects, color)}
-
-    """Can be accomplished using filter_function == object_shape_COND_equals(shape)(object_in_box)"""
-    # @predicate
-    # def member_shape_all_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-    #     return {box for box in boxes if self.object_shape_all_equals(box.objects, shape)}
-    #
-    # @predicate
-    # def member_shape_any_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-    #     return {box for box in boxes if self.object_shape_any_equals(box.objects, shape)}
-    #
-    # @predicate
-    # def member_shape_none_equals(self, boxes: Set[Box], shape: Shape) -> Set[Box]:
-    #     return {box for box in boxes if self.object_shape_none_equals(box.objects, shape)}
-
     @predicate
     def object_shape_same(self, objects: Set[Object]) -> bool:
         return self.object_shape_count_equals(1, objects)
@@ -706,23 +611,6 @@ class NlvrLanguageFuncComposition(DomainLanguage):
     @predicate
     def object_color_different(self, objects: Set[Object]) -> bool:
         return self.object_color_count_not_equals(1, objects)
-
-    """Can be accomplished using filter_function == object_{color, shape}_{same, different}"""
-    # @predicate
-    # def member_shape_same(self, boxes: Set[Box]) -> Set[Box]:
-    #     return {box for box in boxes if self.object_shape_count_equals(box.objects, 1)}
-    #
-    # @predicate
-    # def member_color_same(self, boxes: Set[Box]) -> Set[Box]:
-    #     return {box for box in boxes if self.object_color_count_equals(box.objects, 1)}
-    #
-    # @predicate
-    # def member_shape_different(self, boxes: Set[Box]) -> Set[Box]:
-    #     return {box for box in boxes if self.object_shape_count_not_equals(box.objects, 1)}
-    #
-    # @predicate
-    # def member_color_different(self, boxes: Set[Box]) -> Set[Box]:
-    #     return {box for box in boxes if self.object_color_count_not_equals(box.objects, 1)}
 
     @predicate
     def negate_filter(

@@ -37,6 +37,7 @@ class ActionSpaceWalker:
         """
         Walk over action space to collect completed paths of at most ``self._max_path_length`` steps.
         """
+        logger.info("Running _walk() over the action space ...")
         actions = self._world.get_nonterminal_productions()
         start_productions = actions[START_SYMBOL]
         # Buffer of NTs to expand, previous actions
@@ -57,6 +58,9 @@ class ActionSpaceWalker:
         # the action space itself is breadth-first.
         while incomplete_paths:
             next_paths = []
+            logger.info(
+                f"Completed paths: {len(self._completed_paths)}\tIncompleted paths to explore: {len(incomplete_paths)}"
+            )
             for nonterminal_buffer, history in incomplete_paths:
                 # Taking the last non-terminal added to the buffer. We're going depth-first.
                 nonterminal = nonterminal_buffer.pop()
@@ -96,6 +100,7 @@ class ActionSpaceWalker:
                 # shorter than the max_path_length. The remaining paths will be discarded.
                 elif len(path) <= self._max_path_length:
                     incomplete_paths.append((nonterminal_buffer, path))
+        logger.info("Walk completed. Num of completed paths: {}".format(len(self._completed_paths)))
 
     @staticmethod
     def _get_right_side_parts(action: str) -> List[str]:
