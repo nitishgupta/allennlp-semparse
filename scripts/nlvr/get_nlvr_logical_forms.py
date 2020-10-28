@@ -48,7 +48,11 @@ def process_data(
     # We can instantiate the ``ActionSpaceWalker`` with any world because the action space is the
     # same for all the ``NlvrLanguage`` objects. It is just the execution that differs.
     walker = ActionSpaceWalker(NlvrLanguage({}), max_path_length=max_path_length)
-    examples_w_correct_logical_forms, max_num_correct_logical_forms, total_num_correct_logical_forms = 0, 0, 0
+    (
+        examples_w_correct_logical_forms,
+        max_num_correct_logical_forms,
+        total_num_correct_logical_forms,
+    ) = (0, 0, 0)
     for line in open(input_file):
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
         worlds = []
@@ -84,7 +88,9 @@ def process_data(
                 break
         if correct_logical_forms:
             examples_w_correct_logical_forms += 1
-            max_num_correct_logical_forms = max(max_num_correct_logical_forms, len(correct_logical_forms))
+            max_num_correct_logical_forms = max(
+                max_num_correct_logical_forms, len(correct_logical_forms)
+            )
             total_num_correct_logical_forms += len(correct_logical_forms)
         if prune_data and len(correct_logical_forms) == 0:
             continue
@@ -119,9 +125,13 @@ def process_data(
                 }
             )
 
-    avg_num_correct_logical_forms = float(total_num_correct_logical_forms)/examples_w_correct_logical_forms
+    avg_num_correct_logical_forms = (
+        float(total_num_correct_logical_forms) / examples_w_correct_logical_forms
+    )
     print("Num of examples w/ correct logical forms: {}".format(examples_w_correct_logical_forms))
-    print("Max num of correct logical forms for an example: {}".format(max_num_correct_logical_forms))
+    print(
+        "Max num of correct logical forms for an example: {}".format(max_num_correct_logical_forms)
+    )
     print("Avg num of correct logical forms per example: {}".format(avg_num_correct_logical_forms))
     print("Writing {} instances to: {}".format(len(processed_data), output_file))
     with open(output_file, "w") as outfile:
@@ -180,5 +190,5 @@ if __name__ == "__main__":
         args.max_num_logical_forms,
         args.ignore_agenda,
         args.write_sequences,
-        args.prune_data
+        args.prune_data,
     )

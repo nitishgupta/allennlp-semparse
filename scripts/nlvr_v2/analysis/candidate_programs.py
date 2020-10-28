@@ -6,7 +6,10 @@ import os
 import sys
 
 sys.path.insert(
-    0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir)))))
+    0,
+    os.path.dirname(
+        os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
+    ),
 )
 
 from allennlp_semparse.domain_languages import NlvrLanguageFuncComposition
@@ -38,12 +41,14 @@ def write_candidate_programs(
     output_dicts = []
     for line in open(input_file):
         instance_id, sentence, correct_sequences = read_json_line(line)
-        candidate_logical_forms = [language.action_sequence_to_logical_form(a) for a in correct_sequences]
+        candidate_logical_forms = [
+            language.action_sequence_to_logical_form(a) for a in correct_sequences
+        ]
 
         output_dict = {
             "id": instance_id,
             "sentence": sentence,
-            "candidate_logical_forms": candidate_logical_forms
+            "candidate_logical_forms": candidate_logical_forms,
         }
         output_dicts.append(output_dict)
 

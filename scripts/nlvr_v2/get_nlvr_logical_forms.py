@@ -50,7 +50,11 @@ def process_data(
     # same for all the ``NlvrLanguage`` objects. It is just the execution that differs.
     walker = ActionSpaceWalker(NlvrLanguageFuncComposition({}), max_path_length=max_path_length)
     num_examples = 0
-    examples_w_correct_logical_forms, max_num_correct_logical_forms, total_num_correct_logical_forms = 0, 0, 0
+    (
+        examples_w_correct_logical_forms,
+        max_num_correct_logical_forms,
+        total_num_correct_logical_forms,
+    ) = (0, 0, 0)
     for line in open(input_file):
         instance_id, sentence, structured_reps, label_strings = read_json_line(line)
         worlds = []
@@ -70,7 +74,9 @@ def process_data(
             # TODO (pradeep): Assuming all worlds give the same agenda.
             sentence_agenda = worlds[0].get_agenda_for_sentence(sentence)
             logical_forms = walker.get_logical_forms_with_agenda(
-                sentence_agenda, max_num_logical_forms * 10, allow_partial_match=allow_partial,
+                sentence_agenda,
+                max_num_logical_forms * 10,
+                allow_partial_match=allow_partial,
             )
         for logical_form in logical_forms:
             if all([world.execute(logical_form) == label for world, label in zip(worlds, labels)]):
@@ -87,7 +93,9 @@ def process_data(
         num_examples += 1
         if correct_logical_forms:
             examples_w_correct_logical_forms += 1
-            max_num_correct_logical_forms = max(max_num_correct_logical_forms, len(correct_logical_forms))
+            max_num_correct_logical_forms = max(
+                max_num_correct_logical_forms, len(correct_logical_forms)
+            )
             total_num_correct_logical_forms += len(correct_logical_forms)
         if prune_data and len(correct_logical_forms) == 0:
             continue
@@ -122,9 +130,13 @@ def process_data(
                 }
             )
 
-    avg_num_correct_logical_forms = float(total_num_correct_logical_forms)/examples_w_correct_logical_forms
+    avg_num_correct_logical_forms = (
+        float(total_num_correct_logical_forms) / examples_w_correct_logical_forms
+    )
     print("Num of examples w/ correct logical forms: {}".format(examples_w_correct_logical_forms))
-    print("Max num of correct logical forms for an example: {}".format(max_num_correct_logical_forms))
+    print(
+        "Max num of correct logical forms for an example: {}".format(max_num_correct_logical_forms)
+    )
     print("Avg num of correct logical forms per example: {}".format(avg_num_correct_logical_forms))
     print("Writing {} instances to: {}".format(len(processed_data), output_file))
     with open(output_file, "w") as outfile:
@@ -135,13 +147,26 @@ def process_data(
 
     output_stats_file = os.path.splitext(output_file)[0] + "_stats.txt"
     print("Writing stats to: {}".format(output_stats_file))
-    with open(output_stats_file, 'w') as outfile:
+    with open(output_stats_file, "w") as outfile:
         outfile.write("Input file: {}\n".format(input_file))
         outfile.write("Output file: {}\n".format(output_file))
-        outfile.write("Num of examples w/ correct logical forms: {}\n".format(examples_w_correct_logical_forms))
-        outfile.write("Max num of correct logical forms for an example: {}\n".format(max_num_correct_logical_forms))
-        outfile.write("Avg num of correct logical forms per example: {}\n".format(avg_num_correct_logical_forms))
+        outfile.write(
+            "Num of examples w/ correct logical forms: {}\n".format(
+                examples_w_correct_logical_forms
+            )
+        )
+        outfile.write(
+            "Max num of correct logical forms for an example: {}\n".format(
+                max_num_correct_logical_forms
+            )
+        )
+        outfile.write(
+            "Avg num of correct logical forms per example: {}\n".format(
+                avg_num_correct_logical_forms
+            )
+        )
         outfile.write("Writing {} instances to: {}\n".format(len(processed_data), output_file))
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -201,5 +226,5 @@ if __name__ == "__main__":
         args.ignore_agenda,
         args.allow_partial,
         args.write_sequences,
-        args.prune_data
+        args.prune_data,
     )

@@ -9,6 +9,7 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 )
 
+
 def read_json_line(line: str) -> Tuple[str, str, List[Dict], List[str]]:
     data = json.loads(line)
     instance_id = data["identifier"]

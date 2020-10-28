@@ -150,10 +150,14 @@ class NlvrDirectSemanticParser(NlvrSemanticParser):
                     best_action_sequences[i] = best_action_indices
             # Action-string sequence, for each program, for each instance. If no program is decoded for an instance,
             # the corresponding instance's List[List[str]] would just be an empty []
-            batch_action_strings: List[List[List[str]]] = self._get_action_strings(actions, best_action_sequences)
+            batch_action_strings: List[List[List[str]]] = self._get_action_strings(
+                actions, best_action_sequences
+            )
             # Denotation, for each world, for each program, for each instance. Similarly, if no program is decoded,
             # the corresponding instance's List[List[str]] would just be an empty []
-            batch_denotations: List[List[List[str]]] = self._get_denotations(batch_action_strings, worlds)
+            batch_denotations: List[List[List[str]]] = self._get_denotations(
+                batch_action_strings, worlds
+            )
             batch_sequence_is_correct = None
             if label_strings is not None:
                 # Prediction correct/incorrect, for each world, for each instance

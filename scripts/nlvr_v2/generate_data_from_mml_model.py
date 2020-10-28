@@ -18,7 +18,11 @@ from allennlp_semparse.domain_languages.nlvr_language_v2 import Box
 
 
 def make_data(
-    input_file: str, output_file: str, archived_model_file: str, max_num_decoded_sequences: int, cuda_device: int,
+    input_file: str,
+    output_file: str,
+    archived_model_file: str,
+    max_num_decoded_sequences: int,
+    cuda_device: int,
 ) -> None:
     reader = NlvrV2DatasetReader(output_agendas=False)
     model = load_archive(archived_model_file, cuda_device=cuda_device).model
@@ -88,7 +92,7 @@ def make_data(
             num_outputs += 1
         outfile.close()
     print(f"{num_outputs} out of {num_sentences} sentences have outputs.")
-    avg_correct = float(num_correct)/num_outputs
+    avg_correct = float(num_correct) / num_outputs
     avg_correct_after_pruning = float(num_correct_after_pruning) / num_outputs
     print("Num candidates per example: {}".format(avg_correct))
     print("Num candidates per example after pruning: {}".format(avg_correct_after_pruning))
@@ -108,10 +112,8 @@ if __name__ == "__main__":
         help="Maximum number of sequences per instance to output",
         default=20,
     )
-    parser.add_argument(
-        "--cuda-device",
-        dest="cuda_device",
-        default=0
-    )
+    parser.add_argument("--cuda-device", dest="cuda_device", default=0)
     args = parser.parse_args()
-    make_data(args.input, args.output, args.archived_model, args.max_num_sequences, args.cuda_device)
+    make_data(
+        args.input, args.output, args.archived_model, args.max_num_sequences, args.cuda_device
+    )

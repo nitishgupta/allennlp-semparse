@@ -186,8 +186,10 @@ class NlvrDatasetReader(DatasetReader):
             production_rule_fields.append(field)
         action_field = ListField(production_rule_fields)
         worlds_field = ListField([MetadataField(world) for world in worlds])
-        metadata: Dict[str, Any] = {"sentence_tokens": [x.text for x in tokenized_sentence],
-                                    "sentence": sentence}
+        metadata: Dict[str, Any] = {
+            "sentence_tokens": [x.text for x in tokenized_sentence],
+            "sentence": sentence,
+        }
         fields: Dict[str, Field] = {
             "sentence": sentence_field,
             "worlds": worlds_field,

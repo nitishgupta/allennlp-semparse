@@ -9,6 +9,7 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 )
 
+
 def read_json_line(line: str) -> Tuple[str, str, List[Dict], List[str]]:
     data = json.loads(line)
     instance_id = data["identifier"]
@@ -25,8 +26,8 @@ def read_json_line(line: str) -> Tuple[str, str, List[Dict], List[str]]:
 
 def get_ngrams(tokens, n) -> List:
     output = []
-    for i in range(len(tokens)-n+1):
-        output.append(tokens[i:i+n])
+    for i in range(len(tokens) - n + 1):
+        output.append(tokens[i : i + n])
     return output
 
 
@@ -49,8 +50,26 @@ def abstract_color_shape_number(sentence):
     sentence = sentence.replace("block", "OBJECT")
     sentence = sentence.replace("object", "OBJECT")
 
-    numbers = ["1", "2", "3", "4", "5", "6", "7", "8", "9",
-               "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"]
+    numbers = [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "one",
+        "two",
+        "three",
+        "four",
+        "five",
+        "six",
+        "seven",
+        "eight",
+        "nine",
+    ]
     for num in numbers:
         sentence = sentence.replace(num, "NUMBER")
 
@@ -77,7 +96,7 @@ def ngram_stats(
         sentence = abstract_color_shape_number(sentence)
 
         tokens = sentence.split(" ")
-        for n in range(min_ngram_size, max_ngram_size+1):
+        for n in range(min_ngram_size, max_ngram_size + 1):
             ngrams = get_ngrams(tokens, n)
             ngrams = [" ".join(x) for x in ngrams]  # converting n-gram
             for ngram in ngrams:
@@ -86,7 +105,9 @@ def ngram_stats(
                 ngram_dict[ngram].add(sentence)
 
     # Sorting dict by number of common-sentences
-    ngram_dict = {k: v for k, v in sorted(ngram_dict.items(), key=lambda x: len(x[1]), reverse=True)}
+    ngram_dict = {
+        k: v for k, v in sorted(ngram_dict.items(), key=lambda x: len(x[1]), reverse=True)
+    }
     ngram_dict = {k: v for k, v in ngram_dict.items() if len(v) >= 5}
     print("Number of ngrams: {}".format(len(ngram_dict)))
 
@@ -119,9 +140,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     print(args)
-    ngram_stats(
-        args.input,
-        args.output,
-        args.min_ngram_size,
-        args.max_ngram_size
-    )
+    ngram_stats(args.input, args.output, args.min_ngram_size, args.max_ngram_size)

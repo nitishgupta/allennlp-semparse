@@ -67,7 +67,7 @@ class NlvrParserPredictor(Predictor):
 def get_token_attentions_string(tokens, attentions):
     """Make a human-readable string of tokens and their predicted attentions."""
     output_str = ""
-    attentions = attentions[:len(tokens)]   # attention can be padded to a longer length
+    attentions = attentions[: len(tokens)]  # attention can be padded to a longer length
     for token, attn in zip(tokens, attentions):
         output_str += f"{token}({str(attn)}) "
     return output_str.strip()
@@ -98,7 +98,6 @@ class NlvrParserPredictor(NlvrParserPredictor):
             labels=labels,
         )
         return instance
-
 
     @overrides
     def dump_line(self, outputs: JsonDict) -> str:
@@ -135,7 +134,6 @@ class NlvrParserPredictor(NlvrParserPredictor):
         if sequence_is_correct is not None:
             consistent = all(sequence_is_correct)
 
-
         output_dict = {
             "identifier": identifier,
             "sentence": sentence,
@@ -151,6 +149,3 @@ class NlvrParserPredictor(NlvrParserPredictor):
         output_str = json.dumps(output_dict, indent=2) + "\n"
 
         return output_str
-
-
-

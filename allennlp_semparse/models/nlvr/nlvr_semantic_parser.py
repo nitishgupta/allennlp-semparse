@@ -11,7 +11,11 @@ from allennlp.modules import TextFieldEmbedder, Seq2SeqEncoder, Embedding
 from allennlp.nn import util
 from allennlp.training.metrics import Average
 
-from allennlp_semparse.domain_languages import NlvrLanguage, START_SYMBOL, NlvrLanguageFuncComposition
+from allennlp_semparse.domain_languages import (
+    NlvrLanguage,
+    START_SYMBOL,
+    NlvrLanguageFuncComposition,
+)
 from allennlp_semparse.fields.production_rule_field import ProductionRule
 from allennlp_semparse.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp_semparse.common.util import lisp_to_nested_expression
@@ -156,7 +160,8 @@ class NlvrSemanticParser(Model):
 
     @staticmethod
     def _get_denotations(
-        action_strings: List[List[List[str]]], worlds: List[List[Union[NlvrLanguage, NlvrLanguageFuncComposition]]]
+        action_strings: List[List[List[str]]],
+        worlds: List[List[Union[NlvrLanguage, NlvrLanguageFuncComposition]]],
     ) -> List[List[List[str]]]:
         all_denotations: List[List[List[str]]] = []
         for instance_worlds, instance_action_sequences in zip(worlds, action_strings):
@@ -173,7 +178,7 @@ class NlvrSemanticParser(Model):
                         # Some of the worlds can be None for instances that come with less than 4 worlds
                         # because of padding.
                         if world is not None:
-                                instance_denotations.append(str(world.execute(logical_form)))
+                            instance_denotations.append(str(world.execute(logical_form)))
                 except TypeError:
                     nested_expression = lisp_to_nested_expression(logical_form)
                     logger.error("Error in execution: {}".format(logical_form))
@@ -189,7 +194,9 @@ class NlvrSemanticParser(Model):
 
     @staticmethod
     def _check_denotation(
-        action_sequence: List[str], labels: List[str], worlds: List[Union[NlvrLanguage, NlvrLanguageFuncComposition]]
+        action_sequence: List[str],
+        labels: List[str],
+        worlds: List[Union[NlvrLanguage, NlvrLanguageFuncComposition]],
     ) -> List[bool]:
         is_correct = []
         for world, label in zip(worlds, labels):
@@ -199,7 +206,9 @@ class NlvrSemanticParser(Model):
         return is_correct
 
     def _create_grammar_state(
-        self, world: Union[NlvrLanguage, NlvrLanguageFuncComposition], possible_actions: List[ProductionRule]
+        self,
+        world: Union[NlvrLanguage, NlvrLanguageFuncComposition],
+        possible_actions: List[ProductionRule],
     ) -> GrammarStatelet:
         valid_actions = world.get_nonterminal_productions()
         action_mapping = {}

@@ -46,5 +46,3 @@ for i, d4 in id2candidates_v4.items():
 
 print("Common ex in both: {}".format(in_both))
 print("Examples with different candidates: {}".format(diff_candidates))
-
-
