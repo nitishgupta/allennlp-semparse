@@ -74,7 +74,7 @@ def get_token_attentions_string(tokens, attentions):
 
 
 @Predictor.register("nlvr-parser-visualize")
-class NlvrParserPredictor(NlvrParserPredictor):
+class NlvrVisualizePredictor(NlvrParserPredictor):
     @overrides
     def _json_to_instance(self, json_dict: JsonDict) -> Instance:
         sentence = json_dict["sentence"]
@@ -147,5 +147,45 @@ class NlvrParserPredictor(NlvrParserPredictor):
         }
 
         output_str = json.dumps(output_dict, indent=2) + "\n"
+
+        return output_str
+
+
+@Predictor.register("nlvr-parser-predictions")
+class NlvrPredictionPredictor(NlvrVisualizePredictor):
+    @overrides
+    def dump_line(self, outputs: JsonDict) -> str:
+        identifier = outputs.get("identifier", "N/A")
+        sentence = outputs["sentence"]
+        best_action_strings = outputs["best_action_strings"]
+        if best_action_strings:
+            best_action_strings = best_action_strings[0]
+
+        label_strings = outputs["label_strings"]
+        # All logical-forms in the beam
+        logical_form = outputs["logical_form"]
+        denotations = outputs["denotations"]
+        # Taking denotations for top-scoring program
+        if denotations:
+            denotations = denotations[0]
+        sequence_is_correct = outputs.get("sequence_is_correct", None)
+
+        consistent = None
+        if sequence_is_correct is not None:
+            consistent = all(sequence_is_correct)
+
+        output_dict = {
+            "identifier": identifier,
+            "sentence": sentence,
+            "best_action_strings": best_action_strings,
+            # "action_w_attention": action_w_attention,
+            "best_logical_forms": logical_form,
+            "label_strings": label_strings,
+            "denotations": denotations,
+            "sequence_is_correct": sequence_is_correct,
+            "consistent": consistent,
+        }
+
+        output_str = json.dumps(output_dict) + "\n"
 
         return output_str

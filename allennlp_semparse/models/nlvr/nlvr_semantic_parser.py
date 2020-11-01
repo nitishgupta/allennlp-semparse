@@ -19,6 +19,7 @@ from allennlp_semparse.domain_languages import (
 from allennlp_semparse.fields.production_rule_field import ProductionRule
 from allennlp_semparse.state_machines.states import GrammarBasedState, GrammarStatelet, RnnStatelet
 from allennlp_semparse.common.util import lisp_to_nested_expression
+from allennlp_semparse.common import ParsingError, ExecutionError
 
 logger = logging.getLogger(__name__)
 
@@ -179,7 +180,7 @@ class NlvrSemanticParser(Model):
                         # because of padding.
                         if world is not None:
                             instance_denotations.append(str(world.execute(logical_form)))
-                except TypeError:
+                except (ParsingError, ExecutionError, TypeError):
                     nested_expression = lisp_to_nested_expression(logical_form)
                     logger.error("Error in execution: {}".format(logical_form))
                     logger.error(instance_action_strings)

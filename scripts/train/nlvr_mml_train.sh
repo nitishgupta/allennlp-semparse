@@ -12,8 +12,9 @@ INCLUDE_PACKAGE=allennlp_semparse
 CONFIGFILE=training_config/nlvr_mml_parser.jsonnet
 
 # DATA PATH
-export DATADIR=agenda_v2SC_partial_False
+export DATADIR=agenda_v6_partial_False
 export TRAIN_DATA=../../nfs2_nitishg/data/nlvr/processed/${DATADIR}/train_grouped.json
+# train_mml_cands.json
 # train_grouped.json
 export DEV_DATA=../../nfs2_nitishg/data/nlvr/processed/dev_grouped.json
 

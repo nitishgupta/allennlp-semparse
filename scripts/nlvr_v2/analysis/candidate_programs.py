@@ -52,6 +52,7 @@ def write_candidate_programs(
         }
         output_dicts.append(output_dict)
 
+    print("Writing output to: {}".format(output_file))
     with open(output_file, "w") as outfile:
         json.dump(output_dicts, outfile, indent=2)
 

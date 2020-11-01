@@ -15,6 +15,7 @@ from allennlp_semparse.dataset_readers import NlvrV2DatasetReader
 from allennlp_semparse.models import NlvrMMLSemanticParser
 from allennlp_semparse.domain_languages import NlvrLanguageFuncComposition
 from allennlp_semparse.domain_languages.nlvr_language_v2 import Box
+from allennlp_semparse.common import ParsingError, ExecutionError
 
 
 def make_data(
@@ -66,7 +67,7 @@ def make_data(
             for sequence, logical_form in zip(action_strings, logical_forms):
                 try:
                     denotations = [world.execute(logical_form) for world in worlds]
-                except:
+                except (ParsingError, ExecutionError, TypeError):
                     print("Error executing: {}\n".format(logical_form))
                     denotations = [False for world in worlds]
                 denotations_are_correct = [

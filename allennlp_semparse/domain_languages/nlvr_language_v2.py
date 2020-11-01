@@ -121,6 +121,12 @@ class NlvrLanguageFuncComposition(DomainLanguage):
             allow_function_composition=allow_function_composition,
         )
 
+        # Removing the "Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]" production from grammar
+        # calling to populate productions dictionary
+        _ = self.get_nonterminal_productions()
+        self._nonterminal_productions["Set[Object]"].remove('Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]')
+
+
         # Mapping from terminal strings to productions that produce them.
         # Eg.: "yellow" -> "<Set[Object]:Set[Object]> -> yellow"
         # We use this in the agenda-related methods, and some models that use this language look at
@@ -150,10 +156,10 @@ class NlvrLanguageFuncComposition(DomainLanguage):
             agenda.append(self.terminal_productions["box_exists"])
             agenda.append(self.terminal_productions["box_filter"])
             agenda.append(self.terminal_productions["all_boxes"])
-        # # TODO(nitish): v3, v4, v5- added this elif; v5 added the "of a box" condition
-        # elif ("box" in sentence or "tower" in sentence) and not ("of a box" in sentence or "of a tower" in sentence):
-        #     agenda.append(self.terminal_productions["box_filter"])
-        #     agenda.append(self.terminal_productions["all_boxes"])
+        # # TODO(nitish): v3, v4, v5 - added this elif; v5 added the "of a box" condition
+        elif ("box" in sentence or "tower" in sentence) and not ("of a box" in sentence or "of a tower" in sentence):
+            agenda.append(self.terminal_productions["box_filter"])
+            agenda.append(self.terminal_productions["all_boxes"])
         elif sentence.startswith("there is a "):
             agenda.append(self.terminal_productions["object_exists"])
 

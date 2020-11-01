@@ -1,7 +1,7 @@
 import json
 
-file1 = "../../nfs2_nitishg/data/nlvr/processed/agenda_v2_partial_False/search_candidates.txt"
-file2 = "../../nfs2_nitishg/data/nlvr/processed/agenda_v5_partial_False/search_candidates.txt"
+file1 = "../../nfs2_nitishg/data/nlvr/processed/agenda_v5_partial_False/search_candidates.txt"
+file2 = "../../nfs2_nitishg/data/nlvr/processed/agenda_v6_partial_False/search_candidates.txt"
 
 with open(file1) as f:
     candidates_v2 = json.load(f)
@@ -24,9 +24,14 @@ print("num-ex extra in candidates_1: {}".format(len(v2_extra)))
 v4_extra = ids4.difference(ids2)
 print("num-ex extra in candidates_2: {}".format(len(v4_extra)))
 
-for i in v4_extra:
-    u = id2candidates_v4[i]["sentence"]
-    print(json.dumps(id2candidates_v4[i], indent=2))
+
+# for i in v4_extra:
+#     u = id2candidates_v4[i]["sentence"]
+#     print(json.dumps(id2candidates_v4[i], indent=2))
+
+for i in v2_extra:
+    u = id2candidates_v2[i]["sentence"]
+    print(json.dumps(id2candidates_v2[i], indent=2))
 
 in_both = 0
 diff_candidates = 0
