@@ -16,7 +16,7 @@ sys.path.insert(
     ),
 )
 
-from scripts.nlvr_v2.data.nlvr_instance import NlvrInstance, read_nlvr_data
+from scripts.nlvr_v2.data.nlvr_instance import NlvrInstance, read_nlvr_data, write_nlvr_data, print_dataset_stats
 
 COLORS = ["yellow", "black", "blue"]
 SHAPES = ["circle", "triangle", "square"]
@@ -48,11 +48,13 @@ number_strings = {
 
 class PairedPhrase:
     def __init__(
-        self, abstract_phrases: List[str], grounded_phrases: List[str], sentences: List[str] = []
+        self, abstract_phrases: List[str], grounded_phrases: List[str], sentences: List[str] = [],
+        identifiers: List[str] = []
     ):
         self.abstract_phrases: List[str] = abstract_phrases
         self.grounded_phrases: List[str] = grounded_phrases
         self.sentences: List[str] = sentences
+        self.identifiers: List[str] = identifiers
 
     def __str__(self):
         output = "\n*********\n"
@@ -124,14 +126,56 @@ def convert_abstract_phrase_to_grounded(abstract_phrases: List[str]) -> List[Lis
     return grounded_phrases_sets
 
 
+def get_contained_span(sentence: str, phrases: List[str]):
+    """Get the position of the longest contained span in the sentence from a span in phrases."""
+    # Sorting phrases in decreasing order of length; to select "yellow squares" over "yellow square"
+    sorted_phrases = sorted(phrases, key=lambda x: len(x), reverse=True)
+    char_offsets = [-1, -1]
+    for phrase in sorted_phrases:
+        start_position = sentence.find(phrase)
+        if start_position == -1:
+            # not found
+            continue
+        char_offsets = [start_position, start_position + len(phrase)]
+    return char_offsets
+
+
+def sample_paired_instance(identifier: str, paired_identifiers: List[str], paired_phrases: List[str],
+                           id2instance: Dict[str, NlvrInstance]):
+    """Sample a paired instance for a given instance from a list of instances.
+
+    The instances `identifier` and `paired_identifiers` are known to all share a paired-phrase from `paired_phrases`.
+    The exact phrase might be different; for example identifier might have `yellow block at the base` and an instance
+    could have `the base is yellow`.
+    """
+
+    tries = 100
+    trynum = 0
+    instance = id2instance[identifier]
+    paired_identifier = None
+    orig_char_offsets = None
+    paired_char_offsets = None
+    while paired_identifier is None and trynum < tries:
+        sampled_id = random.choice(paired_identifiers)
+        sampled_instance = id2instance[sampled_id]
+        if sampled_instance.sentence != instance.sentence:
+            # Making sure not the same instance or sentence.
+            # Now need to find the paired-spans
+            orig_char_offsets = get_contained_span(instance.sentence, paired_phrases)
+            paired_char_offsets = get_contained_span(sampled_instance.sentence, paired_phrases)
+            if orig_char_offsets != [-1, -1] and paired_char_offsets != [-1, -1]:
+                paired_identifier = sampled_instance.identifier
+
+    return paired_identifier, orig_char_offsets, paired_char_offsets
+
+
 def make_data(
     data_jsonl: str,
     paired_phrases_json: str,
     output_jsonl: str,
 ) -> None:
-    print("\nReading NLVR data ... ")
     nlvr_instances: List[NlvrInstance] = read_nlvr_data(data_jsonl)
-    print("NLVR instances read: {}\n".format(len(nlvr_instances)))
+    id2instance: Dict[str, NlvrInstance] = {instance.identifier: instance for instance in nlvr_instances}
 
     print("Reading paired data ... ")
     # Each inner list is a set of equivalent abstract phrases; e.g. ["COLOR1 as the base", "the base is COLOR1"]
@@ -139,6 +183,7 @@ def make_data(
         paired_phrases_list: List[List[str]] = json.load(f)
 
     num_abstract_phrases, num_grounded_phrases = 0, 0
+    # Grounded phrase(s) that are equivalent
     paired_phrases: List[PairedPhrase] = []
     # Each abstract set is converted to multiple grounded sets by considering all possible values of the abstract tokens
     for equivalent_abstract_set in paired_phrases_list:
@@ -149,16 +194,20 @@ def make_data(
         for grounded_set in equivalent_grounded_sets:
             # Instances that contain any of the equivalent phrases are paired
             paired_nlvr_sentences: List[str] = []
+            paired_identifiers: List[str] = []
             for instance in nlvr_instances:
                 if any([x in instance.sentence for x in grounded_set]):
                     paired_nlvr_sentences.append(instance.sentence)
-            if not paired_nlvr_sentences:
+                    paired_identifiers.append(instance.identifier)
+            if len(paired_nlvr_sentences) < 2:
+                # No pairing without atleast 2 examples
                 continue
             # Keep this paired phrase only if there are instances containing it
             paired_phrase = PairedPhrase(
                 abstract_phrases=equivalent_abstract_set,
                 grounded_phrases=grounded_set,
                 sentences=paired_nlvr_sentences,
+                identifiers=paired_identifiers,
             )
             paired_phrases.append(paired_phrase)
             num_abstract_phrases += 1
@@ -172,8 +221,40 @@ def make_data(
         )
     )
 
+    num_pairings_made = 0
     for paired_phrase in paired_phrases:
-        print(paired_phrase)
+        # For each phrase, pair each instance having it with some other instance with the same phrase
+        paired_identifiers: List[str] = paired_phrase.identifiers
+        for identifier in paired_phrase.identifiers:
+            instance: NlvrInstance = id2instance[identifier]
+            if instance.paired_example is not None:
+                # Instance already has a paired example
+                continue
+            # For this instance, sample a paired instance from paired_identifiers
+            paired_id, orig_charoffsets, paired_charoffsets = sample_paired_instance(identifier,
+                                                                                     paired_identifiers,
+                                                                                     paired_phrase.grounded_phrases,
+                                                                                     id2instance)
+            if paired_id is not None:
+                # Found a paired instance; add it
+                paired_instance: NlvrInstance = id2instance[paired_id]
+                instance.paired_example = {
+                    "identifier": paired_id,
+                    "sentence": paired_instance.sentence,
+                    "structured_representations": paired_instance.structured_representations,
+                    "labels": paired_instance.labels,
+                    "orig_charoffsets": orig_charoffsets,
+                    "paired_charoffsets": paired_charoffsets,
+                }
+                if paired_instance.correct_candidate_sequences is not None:
+                    instance.paired_example["correct_sequences"] = paired_instance.correct_candidate_sequences
+                num_pairings_made += 1
+
+    print("Num of pairings made: {}".format(num_pairings_made))
+
+    final_instances = [instance for _, instance in id2instance.items()]
+    print_dataset_stats(final_instances)
+    write_nlvr_data(final_instances, output_jsonl)
 
 
 if __name__ == "__main__":

@@ -12,10 +12,10 @@ INCLUDE_PACKAGE=allennlp_semparse
 CONFIGFILE=training_config/nlvr_direct_parser.jsonnet
 
 # DATA PATH
-export DEV_DATA=../../nfs2_nitishg/data/nlvr/processed/dev_grouped.json
+export DEV_DATA=./resources/data/nlvr/processed/dev_grouped.json
 
 # MODEL PATH
-SERIALIZATION_DIR=../../nfs2_nitishg/checkpoints/mml_parser/nlvr/agenda_v5_partial_False/MDS_18/S_42-MML
+SERIALIZATION_DIR=./resources/checkpoints/mml_parser/nlvr/agenda_v6_ML11/MDS_18/S_42-MML
 MODEL_TAR_GZ=${SERIALIZATION_DIR}/model.tar.gz
 
 mkdir ${SERIALIZATION_DIR}/predictions

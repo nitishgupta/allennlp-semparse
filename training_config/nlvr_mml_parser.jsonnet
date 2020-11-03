@@ -6,13 +6,13 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
 
 {
   "dataset_reader": {
-    "type": "nlvr_v2",
+    "type": "nlvr_v2_mml",
     "lazy": false,
     "output_agendas": false,
     "mode": "train"
   },
   "validation_dataset_reader": {
-    "type": "nlvr_v2",
+    "type": "nlvr_v2_mml",
     "lazy": false,
     "output_agendas": false,
     "mode": "test"

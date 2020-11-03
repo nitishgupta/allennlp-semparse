@@ -1,5 +1,6 @@
 from typing import List, Dict, Tuple, Union
 import json
+import os
 
 from allennlp_semparse.domain_languages.nlvr_language_v2 import NlvrLanguageFuncComposition, Box
 
@@ -15,17 +16,44 @@ class NlvrInstance:
             labels = instance_dict["labels"]
             structured_representations = instance_dict["worlds"]
         else:
-            # We will make lists of labels and structured representations, each with just
-            # one element for consistency.
-            labels = [instance_dict["label"]]
-            structured_representations = [instance_dict["structured_rep"]]
+            print("Cannot work with un-grouped NLVR data")
+            raise NotImplementedError
+            # # We will make lists of labels and structured representations, each with just
+            # # one element for consistency.
+            # labels = [instance_dict["label"]]
+            # structured_representations = [instance_dict["structured_rep"]]
 
         self.labels = labels
         self.structured_representations: List[Dict] = structured_representations
         self.worlds: List[NlvrLanguageFuncComposition] = None
 
-        if "correct_sequences" in instance_dict:
-            self.correct_candidate_sequences = instance_dict["correct_sequences"]
+        # if "correct_sequences" in instance_dict:
+        self.correct_candidate_sequences = instance_dict.get("correct_sequences", None)
+
+        # Should have keys like: identifier, sentence, structured_representations, labels,
+        # orig_charoffsets, paired_charoffsets
+        self.paired_example: Dict = instance_dict.get("paired_example", None)
+
+        # Store extra stuff from the instance not covered above
+        self.extras = {}
+        for key in instance_dict:
+            if key not in ["identifier", "sentence", "worlds", "labels", "correct_sequences"]:
+                self.extras[key] = instance_dict[key]
+
+    def to_dict(self):
+        output_dict = {
+            "identifier": self.identifier,
+            "sentence": self.sentence,
+            "worlds": self.structured_representations,
+            "labels": self.labels,
+        }
+        output_dict.update(self.extras)
+        if self.correct_candidate_sequences is not None:
+            output_dict["correct_sequences"] = self.correct_candidate_sequences
+        if self.paired_example is not None:
+            output_dict["paired_example"] = self.paired_example
+
+        return output_dict
 
     def convert_structured_to_worlds(self):
         self.worlds = []
@@ -37,7 +65,22 @@ class NlvrInstance:
             self.worlds.append(NlvrLanguageFuncComposition(boxes))
 
 
+def print_dataset_stats(instances: List[NlvrInstance]):
+    num_instances = len(instances)
+    num_w_correct_sequences, num_pairings = 0, 0
+    for instance in instances:
+        if instance.correct_candidate_sequences is not None:
+            num_w_correct_sequences += 1
+        if instance.paired_example is not None and instance.paired_example:
+            num_pairings += 1
+
+    print("Total instances: {}  Num w/ program-candidates: {}  Num w/ paired examples: {}".format(
+        num_instances, num_w_correct_sequences, num_pairings
+    ))
+
+
 def read_nlvr_data(input_jsonl: str) -> List[NlvrInstance]:
+    print("Reading instances from: {}".format(input_jsonl))
     instances: List[NlvrInstance] = []
     with open(input_jsonl) as data_file:
         for line in data_file:
@@ -47,4 +90,17 @@ def read_nlvr_data(input_jsonl: str) -> List[NlvrInstance]:
             data = json.loads(line)
             instance: NlvrInstance = NlvrInstance(data)
             instances.append(instance)
+    print("Num instances read: {}".format(len(instances)))
     return instances
+
+
+def write_nlvr_data(instances: List[NlvrInstance], output_jsonl: str):
+    print("Writing {} data to: {}".format(len(instances), output_jsonl))
+    output_dir = os.path.split(output_jsonl)[0]
+    os.makedirs(output_dir, exist_ok=True)
+    with open(output_jsonl, 'w') as outf:
+        for instance in instances:
+            output_dict = instance.to_dict()
+            outf.write(json.dumps(output_dict))
+            outf.write("\n")
+    print("Done")

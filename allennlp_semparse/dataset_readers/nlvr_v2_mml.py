@@ -19,7 +19,7 @@ from allennlp_semparse.fields import ProductionRuleField
 logger = logging.getLogger(__name__)
 
 
-@DatasetReader.register("nlvr_v2")
+@DatasetReader.register("nlvr_v2_mml")
 class NlvrV2DatasetReader(DatasetReader):
     """
     ``DatasetReader`` for the NLVR domain. In addition to the usual methods for reading files and
@@ -136,6 +136,11 @@ class NlvrV2DatasetReader(DatasetReader):
                     # We are reading the processed file and these are the "correct" logical form
                     # sequences. See ``scripts/nlvr/get_nlvr_logical_forms.py``.
                     target_sequences = data["correct_sequences"]
+
+                if target_sequences is None and self._mode == "train":
+                    # Skip train instances without target sequences
+                    continue
+
                 instance = self.text_to_instance(
                     sentence, structured_representations, labels, target_sequences, identifier
                 )

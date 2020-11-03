@@ -13,7 +13,7 @@ CONFIGFILE=training_config/nlvr_mml_parser.jsonnet
 
 # DATA PATH
 export DATADIR=agenda_v6_ML11
-export TRAIN_DATA=./resources/data/nlvr/processed/${DATADIR}/train_grouped.json
+export TRAIN_DATA=./resources/data/nlvr/processed/${DATADIR}/train_grouped_all.json
 # train_mml_cands.json
 # train_grouped.json
 export DEV_DATA=./resources/data/nlvr/processed/dev_grouped.json
@@ -24,12 +24,12 @@ export MDS=18
 export SEED=42
 
 # SERIALIZATION PATH
-CHECKPOINT_ROOT=../../nfs2_nitishg/checkpoints
+CHECKPOINT_ROOT=./resources/checkpoints
 MODEL_DIR=mml_parser/nlvr/${DATADIR}
 PARAMETERS=MDS_${MDS}/S_${SEED}
-SERIALIZATION_DIR=${CHECKPOINT_ROOT}/${MODEL_DIR}/${PARAMETERS}
+SERIALIZATION_DIR=${CHECKPOINT_ROOT}/${MODEL_DIR}/${PARAMETERS}-MML
 
-# SERIALIZATION_DIR=${CHECKPOINT_ROOT}/test
+SERIALIZATION_DIR=${CHECKPOINT_ROOT}/test
 
 ## Confirming the checkpoint-path and making sure it does not exist
 #echo "SERIALIZATION_DIR: ${SERIALIZATION_DIR}"
