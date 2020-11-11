@@ -24,6 +24,7 @@ def make_data(
     archived_model_file: str,
     max_num_decoded_sequences: int,
     cuda_device: int,
+    prune_data: bool,
 ) -> None:
     reader = NlvrV2DatasetReader(output_agendas=False)
     model = load_archive(archived_model_file, cuda_device=cuda_device).model
@@ -39,6 +40,7 @@ def make_data(
     model._decoder_beam_search._per_node_beam_size = 100
     model.training = False
     num_outputs = 0
+    num_w_candidates = 0
     num_sentences = 0
     num_correct, num_correct_after_pruning = 0, 0
     with open(output_file, "w") as outfile:
@@ -79,24 +81,31 @@ def make_data(
             num_correct += len(correct_sequences)
             correct_sequences = correct_sequences[:max_num_decoded_sequences]
             num_correct_after_pruning += len(correct_sequences)
-            if not correct_sequences:
-                continue
             output_data = {
                 "id": input_data["identifier"] if "identifier" in input_data else input_data["id"],
                 "sentence": sentence,
-                "correct_sequences": correct_sequences,
                 "worlds": structured_representations,
                 "labels": input_data["labels"],
             }
+            if correct_sequences:
+                output_data.update(
+                    {"correct_sequences": correct_sequences}
+                )
+                num_w_candidates += 1
+            if prune_data:
+                # Don't write instances without consistent candidates
+                continue
             json.dump(output_data, outfile)
             outfile.write("\n")
             num_outputs += 1
         outfile.close()
-    print(f"{num_outputs} out of {num_sentences} sentences have outputs.")
-    avg_correct = float(num_correct) / num_outputs
-    avg_correct_after_pruning = float(num_correct_after_pruning) / num_outputs
+    print(f"Total input sentences: {num_sentences}")
+    print(f"{num_w_candidates} have candidates out of {num_outputs} sentences written.")
+    avg_correct = float(num_correct) / num_w_candidates
+    avg_correct_after_pruning = float(num_correct_after_pruning) / num_w_candidates
     print("Num candidates per example: {}".format(avg_correct))
     print("Num candidates per example after pruning: {}".format(avg_correct_after_pruning))
+    print(f"Output written to: {output_file}")
 
 
 if __name__ == "__main__":
@@ -113,8 +122,15 @@ if __name__ == "__main__":
         help="Maximum number of sequences per instance to output",
         default=20,
     )
-    parser.add_argument("--cuda-device", dest="cuda_device", default=0)
+    parser.add_argument("--cuda-device", dest="cuda_device", type=int, default=0)
+    parser.add_argument(
+        "--prune-data",
+        dest="prune_data",
+        help="Should we only keep examples for which at least one correct logical-form is found?",
+        action="store_true",
+    )
     args = parser.parse_args()
     make_data(
-        args.input, args.output, args.archived_model, args.max_num_sequences, args.cuda_device
+        args.input, args.output, args.archived_model, args.max_num_sequences, args.cuda_device,
+        args.prune_data
     )

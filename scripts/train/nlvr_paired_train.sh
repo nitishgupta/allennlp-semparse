@@ -9,27 +9,30 @@ export MKL_NUM_THREADS=4
 export CUDA=-1
 
 INCLUDE_PACKAGE=allennlp_semparse
-CONFIGFILE=training_config/nlvr_mml_parser.jsonnet
+CONFIGFILE=training_config/nlvr_paired_parser.jsonnet
 
 # DATA PATH
-export DATADIR=agenda_v6_ML11
-export TRAIN_DATA=./resources/data/nlvr/processed/${DATADIR}/train_mml_cands_L18.json
-# train_grouped.json
+export DATADIR=agendav6_paired
+export TRAIN_DATA=./resources/data/nlvr/processed/${DATADIR}/train_grouped.json
 # train_mml_cands.json
+# train_grouped.json
 export DEV_DATA=./resources/data/nlvr/processed/dev_grouped.json
 
 # HYPER-PARAMETERS
-export MDS=18
+export MDS=14
 
-export SEED=42
+export SEED=1
+
+export MML_MODEL_TAR=./resources/checkpoints/mml_parser/nlvr/agenda_v6_ML11/MDS_18/S_42/model.tar.gz
 
 # SERIALIZATION PATH
 CHECKPOINT_ROOT=./resources/checkpoints
-MODEL_DIR=mml_parser/nlvr/${DATADIR}
+MODEL_DIR=nlvr_paired_parser/${DATADIR}
 PARAMETERS=MDS_${MDS}/S_${SEED}
-SERIALIZATION_DIR=${CHECKPOINT_ROOT}/${MODEL_DIR}/${PARAMETERS}-MMLCands
+SERIALIZATION_DIR=${CHECKPOINT_ROOT}/${MODEL_DIR}/${PARAMETERS}-ActionShare
 
-# SERIALIZATION_DIR=${CHECKPOINT_ROOT}/test
+
+# SERIALIZATION_DIR=./resources/checkpoints/test; rm -rf ./resources/checkpoints/test
 
 ## Confirming the checkpoint-path and making sure it does not exist
 #echo "SERIALIZATION_DIR: ${SERIALIZATION_DIR}"

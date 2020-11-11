@@ -1,24 +1,26 @@
 local utils = import 'utils.libsonnet';
-local cuda_device = utils.parse_number(std.extVar("CUDA"));
-
 local train_data = std.extVar("TRAIN_DATA");
 local dev_data = std.extVar("DEV_DATA");
-
+local cuda_device = utils.parse_number(std.extVar("CUDA"));
 local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
+
+local mml_model = std.extVar("MML_MODEL_TAR");
 
 {
   "dataset_reader": {
-    "type": "nlvr_v2_mml",
+    "type": "nlvr_v2_paired",
     "lazy": false,
     "output_agendas": false,
-    "mode": "train"
+    "mode": "train",
+//    "max_instances": 50,
   },
   "validation_dataset_reader": {
-    "type": "nlvr_v2_mml",
+    "type": "nlvr_v2_paired",
     "lazy": false,
     "output_agendas": false,
-    "mode": "test"
-  },
+    "mode": "test",
+//    "max_instances": 50
+},
 
   "vocabulary": {
     "non_padded_namespaces": ["rule_labels", "denotations"]
@@ -26,7 +28,7 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
   "train_data_path": train_data,
   "validation_data_path": dev_data,
   "model": {
-    "type": "nlvr_mml_parser",
+    "type": "nlvr_paired_parser",
     "sentence_embedder": {
       "token_embedders": {
         "tokens": {
@@ -44,12 +46,12 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
       "num_layers": 1,
       "bidirectional": true
     },
-    "decoder_beam_search": {
-      "beam_size": 10
-    },
+
+    "beam_size": 10,
     "max_decoding_steps": maximum_decoding_steps,
     "attention": {"type": "dot_product"},
-    "dropout": 0.2
+    "dropout": 0.2,
+    "initial_mml_model_file": mml_model,
   },
   "data_loader": {
     "batch_sampler": {
@@ -63,7 +65,7 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
     "num_epochs": 50,
     "patience": 10,
     "cuda_device": cuda_device,
-    "validation_metric": "+denotation_accuracy",
+    "validation_metric": "+consistency",
     "optimizer": {
       "type": "adam",
       "lr": 0.005
