@@ -122,7 +122,7 @@ if __name__ == "__main__":
         help="Maximum number of sequences per instance to output",
         default=20,
     )
-    parser.add_argument("--cuda-device", dest="cuda_device", type=int, default=0)
+    parser.add_argument("--cuda-device", dest="cuda_device", type=int, default=-1)
     parser.add_argument(
         "--prune-data",
         dest="prune_data",

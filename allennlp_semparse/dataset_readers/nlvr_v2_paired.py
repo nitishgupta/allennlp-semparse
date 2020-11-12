@@ -89,7 +89,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         sentence_token_indexers: Dict[str, TokenIndexer] = None,
         nonterminal_indexers: Dict[str, TokenIndexer] = None,
         terminal_indexers: Dict[str, TokenIndexer] = None,
-        output_agendas: bool = True,
+        output_agendas: bool = False,
         mode: str = "test",
         **kwargs,
     ) -> None:

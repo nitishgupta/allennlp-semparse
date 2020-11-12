@@ -3,6 +3,7 @@ local train_data = std.extVar("TRAIN_DATA");
 local dev_data = std.extVar("DEV_DATA");
 local cuda_device = utils.parse_number(std.extVar("CUDA"));
 local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
+local epochs = utils.parse_number(std.extVar("EPOCHS"));
 
 local mml_model = std.extVar("MML_MODEL_TAR");
 
@@ -12,14 +13,14 @@ local mml_model = std.extVar("MML_MODEL_TAR");
     "lazy": false,
     "output_agendas": false,
     "mode": "train",
-//    "max_instances": 50,
+//    "max_instances": 500,
   },
   "validation_dataset_reader": {
     "type": "nlvr_v2_paired",
     "lazy": false,
     "output_agendas": false,
     "mode": "test",
-//    "max_instances": 50
+//    "max_instances": 500
 },
 
   "vocabulary": {
@@ -62,13 +63,13 @@ local mml_model = std.extVar("MML_MODEL_TAR");
   },
   "trainer": {
     "checkpointer": {"num_serialized_models_to_keep": 1},
-    "num_epochs": 50,
+    "num_epochs": epochs,
     "patience": 10,
     "cuda_device": cuda_device,
     "validation_metric": "+consistency",
     "optimizer": {
       "type": "adam",
-      "lr": 0.005
+      "lr": 0.001
     }
   },
 

@@ -21,7 +21,7 @@ export DEV_DATA=./resources/data/nlvr/processed/dev_grouped.json
 # HYPER-PARAMETERS
 export MDS=14
 
-export SEED=1
+export SEED=1337
 
 export MML_MODEL_TAR=./resources/checkpoints/mml_parser/nlvr/agenda_v6_ML11/MDS_18/S_42/model.tar.gz
 

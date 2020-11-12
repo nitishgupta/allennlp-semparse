@@ -19,7 +19,7 @@ from allennlp_semparse.fields import ProductionRuleField
 logger = logging.getLogger(__name__)
 
 
-@DatasetReader.register("nlvr_v2_mml")
+@DatasetReader.register("nlvr_v2")
 class NlvrV2DatasetReader(DatasetReader):
     """
     ``DatasetReader`` for the NLVR domain. In addition to the usual methods for reading files and
@@ -90,8 +90,9 @@ class NlvrV2DatasetReader(DatasetReader):
         terminal_indexers: Dict[str, TokenIndexer] = None,
         output_agendas: bool = True,
         mode: str = "test",
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(lazy, **kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {
             "tokens": SingleIdTokenIndexer()
@@ -128,18 +129,14 @@ class NlvrV2DatasetReader(DatasetReader):
                     labels = [data["label"]]
                     structured_representations = [data["structured_rep"]]
 
+                if self._output_agendas and "correct_sequences" in data:
+                    raise NotImplementedError("Meant to run ERM parsing on MML training data?")
+
                 target_sequences: List[List[str]] = None
-                # TODO(pradeep): The processed file also has incorrect sequences as well, which are
-                # needed if we want to define some sort of a hinge-loss based trainer. Deal with
-                # them.
                 if "correct_sequences" in data:
                     # We are reading the processed file and these are the "correct" logical form
                     # sequences. See ``scripts/nlvr/get_nlvr_logical_forms.py``.
                     target_sequences = data["correct_sequences"]
-
-                if target_sequences is None and self._mode == "train":
-                    # Skip train instances without target sequences
-                    continue
 
                 instance = self.text_to_instance(
                     sentence, structured_representations, labels, target_sequences, identifier
@@ -230,11 +227,8 @@ class NlvrV2DatasetReader(DatasetReader):
             )
             fields["agenda"] = agenda_field
         elif self._mode == "train":
-            # TODO(nitish): Ask Pradeep what happens if no target_sequences are found
-            print("NO TARGET SEQUENCES in Train mode; adding empty target sequence")
+            # If no target-sequences and no agenda, disregard instance
             return None
-            # index_fields = ListField([IndexField(-1, action_field)])
-            # fields["target_action_sequences"] = ListField([index_fields])
 
         if labels:
             labels_field = ListField(
