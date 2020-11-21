@@ -8,7 +8,7 @@ we can search for programs with length = 11. Takes about 8 hours.
 ```
 time python scripts/nlvr_v2/get_nlvr_logical_forms.py \
     resources/data/nlvr/processed/train_grouped.json \
-    resources/data/nlvr/processed/agenda_v6_ML11/train_grouped.json \
+    resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
     --write-action-sequences \
     --max-path-length 11
 ```
@@ -48,7 +48,7 @@ Using this, we can automatically find paired examples in the training data using
 python scripts/nlvr_v2/paired_supervision/generate_paired_data.py \
     resources/data/nlvr/processed/train_grouped.json \
     scripts/nlvr_v2/data/paired_phrases_v1.json \
-    resources/data/nlvr/processed/agendav6_paired/train_grouped.json
+    resources/data/nlvr/processed/paired_data/train_v1.json
 ```
 All examples from the input are written; instances for which a paired example is found,
 an additional field `paired_example` is added containing info about the paired instance.
@@ -59,5 +59,14 @@ Note:
 1. Currently, we only limit to a single paired example per instance.
 2. Candidate-programs --- We do write the candidate programs (`correct_sequences` field) 
 from the input to the output as well, in the anticipation that we could use some paired loss with MML parser.
+ 
+## Iterative Parser
+```
+python scripts/train/iterative_train.py \
+    --train_search_json ./resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
+    --erm_model paired \
+    --ckpt_root ./resources/checkpoints/nlvr/basicerm_SORT_01 \
+    --seed 1337
+```
  
  
