@@ -124,6 +124,9 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                     " This is fine if you're just decoding."
                 )
 
+        # Making empty world for parsing utils
+        self.world = NlvrLanguageFuncComposition({})
+
     def _initialize_weights_from_archive(self, archive: Archive) -> None:
         logger.info("Initializing weights from MML model.")
         model_parameters = dict(self.named_parameters())
@@ -299,10 +302,6 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
 
         outputs = {"loss": mean_loss}
 
-        # outputs = self._decoder_trainer.decode(  # type: ignore
-        #     debug_state, self._decoder_step, partial(self._get_state_cost, worlds)
-        # )
-
         if identifier is not None:
             outputs["identifier"] = identifier
 
@@ -316,6 +315,12 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         batch_action_strings: List[List[List[str]]] = self._get_action_strings(
             actions, best_action_sequences
         )
+
+        # for i, instance_worlds in enumerate(worlds):
+        #     for world in instance_worlds:
+        #         if world is not None:
+        #             world.metadata = metadata[i]
+
         # Denotation, for each world, for each program, for each instance. Similarly, if no program is decoded,
         # the corresponding instance's List[List[str]] would just be an empty []
         batch_denotations: List[List[List[str]]] = self._get_denotations(
@@ -359,6 +364,8 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
             outputs["action_mapping"] = action_mapping
+            if label_strings:
+                outputs["label_strings"] = label_strings
             if batch_sequence_is_correct:
                 outputs["sequence_is_correct"] = batch_sequence_is_correct
 
@@ -478,62 +485,6 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
             "consistency": self._consistency.get_metric(reset),
         }
 
-    def make_output_human_readable(
-        self, output_dict: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
-        """
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions. We only transform the action string sequences into logical
-        forms here.
-        """
-        best_action_strings = output_dict["best_action_strings"]
-        # Instantiating an empty world for getting logical forms.
-        world = NlvrLanguageFuncComposition(set())
-        logical_forms: List[List[str]] = []
-        for instance_action_sequences in best_action_strings:
-            instance_logical_forms: List[str] = []
-            for action_strings in instance_action_sequences:
-                if action_strings:
-                    instance_logical_forms.append(
-                        world.action_sequence_to_logical_form(action_strings)
-                    )
-                else:
-                    instance_logical_forms.append("")
-            logical_forms.append(instance_logical_forms)
-
-        action_mapping = output_dict["action_mapping"]
-        best_actions = output_dict["best_action_strings"]
-        debug_infos = output_dict["debug_info"]
-        batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(
-            zip(best_actions, debug_infos)
-        ):
-            instance_action_info = []
-            if not predicted_actions:
-                # No program is decoded for this instance
-                batch_action_info.append(instance_action_info)
-                continue
-            for predicted_action, action_debug_info in zip(predicted_actions[0], debug_info):
-                action_info = {}
-                action_info["predicted_action"] = predicted_action
-                considered_actions = action_debug_info["considered_actions"]
-                probabilities = action_debug_info["probabilities"]
-                actions = []
-                for action, probability in zip(considered_actions, probabilities):
-                    if action != -1:
-                        actions.append((action_mapping[(batch_index, action)], probability))
-                actions.sort()
-                considered_actions, probabilities = zip(*actions)
-                action_info["considered_actions"] = considered_actions
-                action_info["action_probabilities"] = probabilities
-                action_info["question_attention"] = action_debug_info.get("question_attention", [])
-                instance_action_info.append(action_info)
-            batch_action_info.append(instance_action_info)
-
-        output_dict["predicted_actions"] = batch_action_info
-        output_dict["logical_form"] = logical_forms
-        return output_dict
-
     def _get_state_cost(
         self,
         batch_worlds: List[List[NlvrLanguageFuncComposition]],
@@ -571,10 +522,10 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         if state.extras is None or all(sequence_is_correct):
             # first condition is illogical; copied from Coverage-based parser.
             # Zero-cost if sequence is consistent
-            cost = denotation_cost
+            cost = denotation_cost - 1.0
         else:
             # Cost since sequence is not consistent
-            cost = denotation_cost + 2.0
+            cost = denotation_cost   # + 1.0
 
         if paired_examples_output is None:
             # In non-training mode
@@ -713,61 +664,3 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         is_correct: List[bool] = NlvrSemanticParser._check_denotation(
             action_sequence=action_sequence, labels=labels, worlds=worlds)
         return all(is_correct)
-
-    def make_output_human_readable(
-        self, output_dict: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
-        """
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions. We only transform the action string sequences into logical
-        forms here.
-        """
-        best_action_strings = output_dict["best_action_strings"]
-        # Instantiating an empty world for getting logical forms.
-        world = NlvrLanguageFuncComposition(set())
-        logical_forms = []
-        for instance_action_sequences in best_action_strings:
-            instance_logical_forms = []
-            for action_strings in instance_action_sequences:
-                if action_strings:
-                    instance_logical_forms.append(
-                        world.action_sequence_to_logical_form(action_strings)
-                    )
-                else:
-                    instance_logical_forms.append("")
-            logical_forms.append(instance_logical_forms)
-
-        action_mapping = output_dict["action_mapping"]
-        best_actions = output_dict["best_action_strings"]
-        debug_infos = output_dict["debug_info"]
-        batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(
-            zip(best_actions, debug_infos)
-        ):
-            instance_action_info = []
-            if not predicted_actions:
-                # No program is decoded for this instance
-                batch_action_info.append(instance_action_info)
-                continue
-            for predicted_action, action_debug_info in zip(predicted_actions[0], debug_info):
-                action_info = {}
-                action_info["predicted_action"] = predicted_action
-                considered_actions = action_debug_info["considered_actions"]
-                probabilities = action_debug_info["probabilities"]
-                actions = []
-                for action, probability in zip(considered_actions, probabilities):
-                    if action != -1:
-                        actions.append((action_mapping[(batch_index, action)], probability))
-                actions.sort()
-                considered_actions, probabilities = zip(*actions)
-                action_info["considered_actions"] = considered_actions
-                action_info["action_probabilities"] = probabilities
-                action_info["question_attention"] = action_debug_info.get("question_attention", [])
-                instance_action_info.append(action_info)
-            batch_action_info.append(instance_action_info)
-
-        output_dict["predicted_actions"] = batch_action_info
-        output_dict["logical_form"] = logical_forms
-        return output_dict
-
-

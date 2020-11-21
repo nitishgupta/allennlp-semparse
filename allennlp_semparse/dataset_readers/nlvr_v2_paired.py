@@ -107,9 +107,11 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         self._output_agendas = output_agendas
         self._mode = mode
         assert self._mode in ["train", "test"]
+        self.num_paired_examples = 0
 
     @overrides
     def _read(self, file_path: str):
+        self.num_paired_examples = 0
         with open(file_path, "r") as data_file:
             logger.info("Reading instances from lines in file: %s", file_path)
             for line in data_file:
@@ -146,6 +148,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
                 )
                 if instance is not None:
                     yield instance
+        logger.info("Number of paired examples: {}".format(self.num_paired_examples))
 
     @overrides
     def text_to_instance(
@@ -204,6 +207,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         }
         if identifier is not None:
             fields["identifier"] = MetadataField(identifier)
+            metadata["identifier"] = identifier
         # Depending on the type of supervision used for training the parser, we may want either
         # target action sequences or an agenda in our instance. We check if target sequences are
         # provided, and include them if they are. If not, we'll get an agenda for the sentence, and
@@ -259,6 +263,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
             else:
                 paired_action_sequence_fields = [ListField([IndexField(-1, action_field)])]
             paired_mask = 1
+            self.num_paired_examples += 1
         else:
             paired_identifer = "N/A"
             paired_sentence = "NONE"

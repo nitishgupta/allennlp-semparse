@@ -288,7 +288,10 @@ class NlvrCoverageSemanticParser(NlvrSemanticParser):
                 outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
             outputs["debug_info"] = []
             for i in range(batch_size):
-                outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                if i in best_final_states:
+                    outputs["debug_info"].append(best_final_states[i][0].debug_info[0])  # type: ignore
+                else:
+                    outputs["debug_info"].append([])
             outputs["best_action_strings"] = batch_action_strings
             outputs["denotations"] = batch_denotations
             action_mapping = {}

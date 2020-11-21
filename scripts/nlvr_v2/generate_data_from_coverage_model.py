@@ -11,21 +11,22 @@ sys.path.insert(
 )
 
 from allennlp_semparse.dataset_readers import NlvrV2DatasetReader
-from allennlp_semparse.models import NlvrERMSemanticParser
+from allennlp_semparse.models import NlvrERMCoverageSemanticParser
 from allennlp.models.archival import load_archive
 from allennlp_semparse.domain_languages import NlvrLanguageFuncComposition
 from allennlp_semparse.domain_languages.nlvr_language_v2 import Box
 from allennlp_semparse.common import ParsingError, ExecutionError
 
 def make_data(
-    input_file: str, output_file: str, archived_model_file: str, max_num_decoded_sequences: int
+    input_file: str, output_file: str, archived_model_file: str, max_num_decoded_sequences: int,
+    cuda_device: int = -1, **kwargs,
 ) -> None:
     reader = NlvrV2DatasetReader(output_agendas=True)
-    model = load_archive(archived_model_file).model
-    if not isinstance(model, NlvrERMSemanticParser):
+    model = load_archive(archived_model_file, cuda_device=cuda_device).model
+    if not isinstance(model, NlvrERMCoverageSemanticParser):
         model_type = type(model)
         raise RuntimeError(
-            f"Expected an archived NlvrCoverageSemanticParser, but found {model_type} instead"
+            f"Expected an archived NlvrERMCoverageSemanticParser, but found {model_type} instead"
         )
     # Tweaking the decoder trainer to coerce the it to generate a k-best list. Setting k to 100
     # here, so that we can filter out the inconsistent ones later.

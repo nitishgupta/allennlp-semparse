@@ -10,10 +10,10 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 )
 
-from allennlp.data.dataset_readers import NlvrDatasetReader
-from allennlp.models import NlvrCoverageSemanticParser
+from allennlp_semparse.dataset_readers import NlvrDatasetReader
+from allennlp_semparse.models import NlvrCoverageSemanticParser
 from allennlp.models.archival import load_archive
-from allennlp.semparse.worlds import NlvrWorld
+from allennlp_semparse.domain_languages.nlvr_language import NlvrLanguage, Box
 
 
 def make_data(
@@ -29,6 +29,7 @@ def make_data(
     # Tweaking the decoder trainer to coerce the it to generate a k-best list. Setting k to 100
     # here, so that we can filter out the inconsistent ones later.
     model._decoder_trainer._max_num_decoded_sequences = 100
+    model.training = False
     num_outputs = 0
     num_sentences = 0
     with open(output_file, "w") as outfile:
@@ -44,7 +45,15 @@ def make_data(
             logical_forms = outputs["logical_form"]
             correct_sequences = []
             # Checking for consistency
-            worlds = [NlvrWorld(structure) for structure in structured_representations]
+            # worlds = [NlvrLanguage(structure) for structure in structured_representations]
+            worlds = []
+            for structured_representation in structured_representations:
+                boxes = {
+                    Box(object_list, box_id)
+                    for box_id, object_list in enumerate(structured_representation)
+                }
+                worlds.append(NlvrLanguage(boxes))
+
             for sequence, logical_form in zip(action_strings, logical_forms):
                 denotations = [world.execute(logical_form) for world in worlds]
                 denotations_are_correct = [

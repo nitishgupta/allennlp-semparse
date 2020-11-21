@@ -90,8 +90,9 @@ class NlvrDatasetReader(DatasetReader):
         terminal_indexers: Dict[str, TokenIndexer] = None,
         output_agendas: bool = True,
         mode: str = "test",
+        **kwargs,
     ) -> None:
-        super().__init__(lazy)
+        super().__init__(lazy, **kwargs)
         self._tokenizer = tokenizer or SpacyTokenizer()
         self._sentence_token_indexers = sentence_token_indexers or {
             "tokens": SingleIdTokenIndexer()

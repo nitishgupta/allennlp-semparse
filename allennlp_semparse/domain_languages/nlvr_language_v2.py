@@ -69,7 +69,8 @@ class Box:
         self.shapes = {obj.shape for obj in self.objects}
 
     def __str__(self):
-        return self._objects_string
+        # Add box_name to str to differentiate boxes if object set if exactly same
+        return self._name + ": " + self._objects_string
 
     def __hash__(self):
         return hash(str(self))
@@ -92,6 +93,7 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         boxes: Set[Box],
         allow_function_currying: bool = True,
         allow_function_composition: bool = True,
+        metadata = None,
     ) -> None:
         self.boxes = boxes
         self.objects: Set[Object] = set()
@@ -134,6 +136,8 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         self.terminal_productions: Dict[str, str] = {}
         for name, types in self._function_types.items():
             self.terminal_productions[name] = f"{types[0]} -> {name}"
+
+        self.metadata = metadata
 
     # These first two methods are about getting an "agenda", which, given an input utterance,
     # tries to guess what production rules should be needed in the logical form.
@@ -294,6 +298,11 @@ class NlvrLanguageFuncComposition(DomainLanguage):
 
     @predicate
     def blue(self, objects: Set[Object]) -> Set[Object]:
+        # print("Blue input:{}".format(len(objects)))
+        # print([str(o) for o in objects])
+        output_set = {obj for obj in objects if obj.color == "blue"}
+        # print("output:{}".format(len(output_set)))
+        # print([str(o) for o in output_set])
         return {obj for obj in objects if obj.color == "blue"}
 
     @predicate
@@ -420,14 +429,22 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         the input is a set of two objects, one in each box, we will return a union of the objects
         above the first object in the first box, and those above the second object in the second box.
         """
-        objects_per_box = self._separate_objects_by_boxes(objects)
+        # print("Above in:{}".format(len(objects)))
+        # print([str(o) for o in objects])
+        objects_per_box: Dict[Box, List[Object]] = self._separate_objects_by_boxes(objects)
         return_set = set()
         for box in objects_per_box:
             # min_y_loc corresponds to the top-most object.
-            min_y_loc = min([obj.y_loc for obj in objects_per_box[box]])
+            # min_y_loc = min([obj.y_loc for obj in objects_per_box[box]])
+            # TODO(nitish): changing from returning objs above the top-most input object, return objs that are above
+            #  any input object
+            y_locs = [obj.y_loc for obj in objects_per_box[box]]
             for candidate_obj in box.objects:
-                if candidate_obj.y_loc < min_y_loc:
+                if any(candidate_obj.y_loc < y_loc for y_loc in y_locs):
+                # if candidate_obj.y_loc < min_y_loc:
                     return_set.add(candidate_obj)
+        # print("Above out:{}".format(len(return_set)))
+        # print([str(o) for o in return_set])
         return return_set
 
     @predicate
@@ -441,9 +458,13 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         return_set = set()
         for box in objects_per_box:
             # max_y_loc corresponds to the bottom-most object.
-            max_y_loc = max([obj.y_loc for obj in objects_per_box[box]])
+            # max_y_loc = max([obj.y_loc for obj in objects_per_box[box]])
+            # TODO(nitish): changing from returning objs above the top-most input object, return objs that are above
+            #  any input object
+            y_locs = [obj.y_loc for obj in objects_per_box[box]]
             for candidate_obj in box.objects:
-                if candidate_obj.y_loc > max_y_loc:
+                if any(candidate_obj.y_loc > y_loc for y_loc in y_locs):
+                # if candidate_obj.y_loc > max_y_loc:
                     return_set.add(candidate_obj)
         return return_set
 
@@ -585,10 +606,15 @@ class NlvrLanguageFuncComposition(DomainLanguage):
     ) -> Set[Box]:
         filtered_boxes = set()
         for box in boxes:
+            # if self.metadata is not None and self.metadata["identifier"] == "3840":
+            #     print("\nBOX - {}".format(box_num))
             # Wrapping a single box in a {set}
             objects = self.object_in_box(box={box})
             if filter_function(objects):
                 filtered_boxes.add(box)
+        # if self.metadata is not None and self.metadata["identifier"] == "3840":
+        #     import pdb
+        #     pdb.set_trace()
         return filtered_boxes
 
     @predicate

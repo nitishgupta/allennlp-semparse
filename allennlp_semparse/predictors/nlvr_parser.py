@@ -73,6 +73,20 @@ def get_token_attentions_string(tokens, attentions):
     return output_str.strip()
 
 
+def get_influential_tokens(tokens, attentions, threshold):
+    """Return a list of tokens that are influential, i.e., attention >= threshold.
+    The returned tokens list is the same size as input tokens, only that irrelevant tokens are _ (masked)
+    """
+    output_tokens = []
+    attentions = attentions[: len(tokens)]  # attention can be padded to a longer length
+    for token, attn in zip(tokens, attentions):
+        if attn >= threshold:
+            output_tokens.append(token)
+        else:
+            output_tokens.append("_")
+    return output_tokens
+
+
 @Predictor.register("nlvr-parser-visualize")
 class NlvrVisualizePredictor(NlvrParserPredictor):
     @overrides
@@ -115,15 +129,21 @@ class NlvrVisualizePredictor(NlvrParserPredictor):
         question_attentions = [a["question_attention"] for a in predicted_actions]
         question_attentions = round_all(question_attentions, 3)
 
-        action_w_attention = []
+        # List of "{action} {attended_tokens}" strings -- constructed by selecting
+        # influential tokens for an action by thresholding the attention
+        actions_w_attended_tokens = []
         for action, attentions in zip(action_strings, question_attentions):
-            utterance_attention_string = get_token_attentions_string(sentence_tokens, attentions)
-            action_w_attention.append(action)
-            action_w_attention.append(utterance_attention_string)
+            imp_tokens = get_influential_tokens(sentence_tokens, attentions, threshold=0.1)
+            imp_tokens_string = " ".join(imp_tokens)
+            actions_w_attended_tokens.append(f"[{action}] --  {imp_tokens_string}")
+            # utterance_attention_string = get_token_attentions_string(sentence_tokens, attentions)
+            # action_w_attention.append(action)
+            # action_w_attention.append(utterance_attention_string)
 
         label_strings = outputs["label_strings"]
         # All logical-forms in the beam
-        logical_form = outputs["logical_form"]
+        logical_forms = outputs["logical_form"]
+        best_logical_form = logical_forms[0] if logical_forms else ""
         denotations = outputs["denotations"]
         # Taking denotations for top-scoring program
         if denotations:
@@ -137,9 +157,10 @@ class NlvrVisualizePredictor(NlvrParserPredictor):
         output_dict = {
             "identifier": identifier,
             "sentence": sentence,
-            "best_action_strings": best_action_strings,
-            # "action_w_attention": action_w_attention,
-            "best_logical_forms": logical_form,
+            # "best_action_strings": best_action_strings,
+            "best_action_strings": actions_w_attended_tokens,
+            "best_logical_form": best_logical_form,
+            # "best_logical_forms": logical_form,
             "label_strings": label_strings,
             "denotations": denotations,
             "sequence_is_correct": sequence_is_correct,

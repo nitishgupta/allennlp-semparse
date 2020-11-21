@@ -82,6 +82,9 @@ class NlvrMMLSemanticParser(NlvrSemanticParser):
         self._max_decoding_steps = max_decoding_steps
         self._action_padding_index = -1
 
+        # Making empty world for parsing utils
+        self.world = NlvrLanguageFuncComposition({})
+
     @overrides
     def forward(
         self,  # type: ignore
@@ -230,59 +233,3 @@ class NlvrMMLSemanticParser(NlvrSemanticParser):
             "denotation_accuracy": self._denotation_accuracy.get_metric(reset),
             "consistency": self._consistency.get_metric(reset),
         }
-
-    def make_output_human_readable(
-        self, output_dict: Dict[str, torch.Tensor]
-    ) -> Dict[str, torch.Tensor]:
-        """
-        This method overrides ``Model.decode``, which gets called after ``Model.forward``, at test
-        time, to finalize predictions. We only transform the action string sequences into logical
-        forms here.
-        """
-        best_action_strings = output_dict["best_action_strings"]
-        # Instantiating an empty world for getting logical forms.
-        world = NlvrLanguageFuncComposition(set())
-        logical_forms: List[List[str]] = []
-        for instance_action_sequences in best_action_strings:
-            instance_logical_forms: List[str] = []
-            for action_strings in instance_action_sequences:
-                if action_strings:
-                    instance_logical_forms.append(
-                        world.action_sequence_to_logical_form(action_strings)
-                    )
-                else:
-                    instance_logical_forms.append("")
-            logical_forms.append(instance_logical_forms)
-
-        action_mapping = output_dict["action_mapping"]
-        best_actions = output_dict["best_action_strings"]
-        debug_infos = output_dict["debug_info"]
-        batch_action_info = []
-        for batch_index, (predicted_actions, debug_info) in enumerate(
-            zip(best_actions, debug_infos)
-        ):
-            instance_action_info = []
-            if not predicted_actions:
-                # No program is decoded for this instance
-                batch_action_info.append(instance_action_info)
-                continue
-            for predicted_action, action_debug_info in zip(predicted_actions[0], debug_info):
-                action_info = {}
-                action_info["predicted_action"] = predicted_action
-                considered_actions = action_debug_info["considered_actions"]
-                probabilities = action_debug_info["probabilities"]
-                actions = []
-                for action, probability in zip(considered_actions, probabilities):
-                    if action != -1:
-                        actions.append((action_mapping[(batch_index, action)], probability))
-                actions.sort()
-                considered_actions, probabilities = zip(*actions)
-                action_info["considered_actions"] = considered_actions
-                action_info["action_probabilities"] = probabilities
-                action_info["question_attention"] = action_debug_info.get("question_attention", [])
-                instance_action_info.append(action_info)
-            batch_action_info.append(instance_action_info)
-
-        output_dict["predicted_actions"] = batch_action_info
-        output_dict["logical_form"] = logical_forms
-        return output_dict

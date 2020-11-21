@@ -39,14 +39,14 @@ class NlvrDatasetPredictions:
 
         self.id2instance = {instance.identifier: instance for instance in self.instances}
 
-        self.correct_instance_ids: List[str] = [
+        self.consistent_instance_ids: List[str] = [
             instance.identifier for instance in self.instances if instance.consistent
         ]
 
         self.num_instances = len(self.instances)
+        self.num_consistent = len(self.consistent_instance_ids)
         self.avg_consistency = self.compute_avg_consistency()
 
     def compute_avg_consistency(self):
-        total_consistency = sum([i.consistent for i in self.instances])
-        avg_consistency = 100.0 * (float(total_consistency) / self.num_instances)
+        avg_consistency = 100.0 * (float(self.num_consistent) / self.num_instances)
         return avg_consistency

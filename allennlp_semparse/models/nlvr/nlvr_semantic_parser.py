@@ -82,6 +82,9 @@ class NlvrSemanticParser(Model):
         self._first_action_embedding = torch.nn.Parameter(torch.FloatTensor(action_embedding_dim))
         torch.nn.init.normal_(self._first_action_embedding)
 
+        # Making empty world for parsing utils
+        self.world = NlvrLanguage({})
+
     @overrides
     def forward(self):  # type: ignore
         # Sub-classes should define their own logic here.
@@ -179,6 +182,7 @@ class NlvrSemanticParser(Model):
                         # Some of the worlds can be None for instances that come with less than 4 worlds
                         # because of padding.
                         if world is not None:
+                            # print(logical_form)
                             instance_denotations.append(str(world.execute(logical_form)))
                 except (ParsingError, ExecutionError, TypeError):
                     nested_expression = lisp_to_nested_expression(logical_form)
@@ -200,10 +204,14 @@ class NlvrSemanticParser(Model):
         worlds: List[Union[NlvrLanguage, NlvrLanguageFuncComposition]],
     ) -> List[bool]:
         is_correct = []
-        for world, label in zip(worlds, labels):
-            logical_form = world.action_sequence_to_logical_form(action_sequence)
-            denotation = world.execute(logical_form)
-            is_correct.append(str(denotation).lower() == label)
+        try:
+            for world, label in zip(worlds, labels):
+                logical_form = world.action_sequence_to_logical_form(action_sequence)
+                denotation = world.execute(logical_form)
+                is_correct.append(str(denotation).lower() == label)
+        except:
+            num_worlds = sum([1 for world in worlds if world is not None])
+            is_correct = [False] * num_worlds
         return is_correct
 
     def _create_grammar_state(
@@ -248,7 +256,8 @@ class NlvrSemanticParser(Model):
         """
         best_action_strings = output_dict["best_action_strings"]
         # Instantiating an empty world for getting logical forms.
-        world = NlvrLanguage(set())
+        # Different models instantiate a different nlvr language world
+        world = self.world
         logical_forms = []
         for instance_action_sequences in best_action_strings:
             instance_logical_forms = []

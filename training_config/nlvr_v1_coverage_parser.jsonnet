@@ -6,19 +6,20 @@ local train_data = std.extVar("TRAIN_DATA");
 local dev_data = std.extVar("DEV_DATA");
 
 local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
+local mml_model = std.extVar("MML_MODEL_TAR");
 
 {
   "dataset_reader": {
-    "type": "nlvr_v2",
+    "type": "nlvr",
     "lazy": false,
-    "output_agendas": false,
+    "output_agendas": true,
     "mode": "train",
 //    "max_instances": 50
   },
   "validation_dataset_reader": {
-    "type": "nlvr_v2",
+    "type": "nlvr",
     "lazy": false,
-    "output_agendas": false,
+    "output_agendas": true,
     "mode": "test",
 //    "max_instances": 50
   },
@@ -29,7 +30,7 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
   "train_data_path": train_data,
   "validation_data_path": dev_data,
   "model": {
-    "type": "nlvr_mml_parser",
+    "type": "nlvr_coverage_parser",
     "sentence_embedder": {
       "token_embedders": {
         "tokens": {
@@ -47,12 +48,14 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
       "num_layers": 1,
       "bidirectional": true
     },
-    "decoder_beam_search": {
-      "beam_size": 10
-    },
+    "beam_size": 10,
+    "normalize_beam_score_by_length": false,
     "max_decoding_steps": maximum_decoding_steps,
+    "checklist_cost_weight": 0.4,
+    "penalize_non_agenda_actions": false,
+    "dropout": 0.2,
+    "initial_mml_model_file": mml_model,
     "attention": {"type": "dot_product"},
-    "dropout": 0.2
   },
   "data_loader": {
     "batch_sampler": {
@@ -69,7 +72,7 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
     "validation_metric": "+consistency",
     "optimizer": {
       "type": "adam",
-      "lr": 0.005
+      "lr": 0.001
     }
   },
 

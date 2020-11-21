@@ -1,18 +1,24 @@
+local utils = import 'utils.libsonnet';
+
 local train_data = std.extVar("TRAIN_DATA");
 local dev_data = std.extVar("DEV_DATA");
+
+local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
 
 {
   "dataset_reader": {
     "type": "nlvr",
     "lazy": false,
     "output_agendas": false,
-    "mode": "train"
+    "mode": "train",
+//    "max_instances": 50
   },
   "validation_dataset_reader": {
     "type": "nlvr",
     "lazy": false,
     "output_agendas": false,
-    "mode": "test"
+    "mode": "test",
+//    "max_instances": 50
   },
 
   "vocabulary": {
@@ -42,7 +48,7 @@ local dev_data = std.extVar("DEV_DATA");
     "decoder_beam_search": {
       "beam_size": 10
     },
-    "max_decoding_steps": 14,
+    "max_decoding_steps": maximum_decoding_steps,
     "attention": {"type": "dot_product"},
     "dropout": 0.2
   },
@@ -57,8 +63,8 @@ local dev_data = std.extVar("DEV_DATA");
     "checkpointer": {"num_serialized_models_to_keep": 1},
     "num_epochs": 50,
     "patience": 10,
-    "cuda_device": 0,
-    "validation_metric": "+denotation_accuracy",
+    "cuda_device": -1,
+    "validation_metric": "+consistency",
     "optimizer": {
       "type": "adam",
       "lr": 0.005

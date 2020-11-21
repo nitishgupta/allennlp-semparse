@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import List, Dict, Set
 import logging
+import random
 
 from allennlp.common.util import START_SYMBOL
 
@@ -8,6 +9,26 @@ from allennlp_semparse.domain_languages.domain_language import DomainLanguage
 
 
 logger = logging.getLogger(__name__)
+
+
+def sort_paths_by_length(unsorted_paths: List[List[str]]):
+    """Sort paths by lengths, but shuffle paths of the same length."""
+    # Create map from length: paths with that length
+    len2paths = {}
+    for path in unsorted_paths:
+        length = len(path)
+        if length not in len2paths:
+            len2paths[length] = []
+        len2paths[length].append(path)
+    # Shuffle each length's paths list
+    for l in len2paths:
+        random.shuffle(len2paths[l])
+    sorted_lengths = sorted(list(len2paths.keys()))
+    # Add paths in increasing order of their length
+    paths = []
+    for l in sorted_lengths:
+        paths.extend(len2paths[l])
+    return paths
 
 
 class ActionSpaceWalker:
@@ -180,6 +201,9 @@ class ActionSpaceWalker:
                     indices_to_return.append(index)
             # Sort all the paths by length
             paths = sorted([self._completed_paths[index] for index in indices_to_return], key=len)
+
+        paths = sort_paths_by_length(paths)
+
         if max_num_logical_forms is not None:
             paths = paths[:max_num_logical_forms]
         logical_forms = [self._world.action_sequence_to_logical_form(path) for path in paths]
