@@ -61,12 +61,48 @@ Note:
 from the input to the output as well, in the anticipation that we could use some paired loss with MML parser.
  
 ## Iterative Parser
+
+**Basic-erm** training:
+1. Uses `training_config/nlvr_paired_parser.jsonnet`, which uses the `nlvr_v2_paired` reader 
+2. `train_json` should contain paired_examples
 ```
 python scripts/train/iterative_train.py \
     --train_search_json ./resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
+    --train_json ./resources/data/nlvr/processed/train_grouped.json \
     --erm_model paired \
-    --ckpt_root ./resources/checkpoints/nlvr/basicerm_SORT_01 \
+    --ckpt_root ./resources/checkpoints/nlvr/pairedv1_SORT_01 \
     --seed 1337
 ```
+
+**Paired-erm** training:
+1. Uses `training_config/nlvr_paired_parser.jsonnet`, which uses the `nlvr_v2_paired` reader
+2. `train_json` should be vanilla
+```
+python scripts/train/iterative_train.py \
+    --train_search_json ./resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
+    --train_json  ./resources/data/nlvr/processed/paired_data/train_v1.json \
+    --erm_model paired \
+    --ckpt_root ./resources/checkpoints/nlvr/pairedv1_SORT_01 \
+    --seed 1337
+```
+
+**Coverage-erm** training:
+1. Uses `training_config/nlvr_coverage_parser.jsonnet`, which uses the `nlvr_v2` reader and a different model 
+which uses the agenda-coverage transition function from Dasigi et al.
+2. `train_json` should be vanilla
+3. *TODO: paired version for this is not yet implemented*
+```
+python scripts/train/iterative_train.py \
+    --train_search_json ./resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
+    --train_json ./resources/data/nlvr/processed/train_grouped.json \
+    --erm_model coverage \
+    --ckpt_root ./resources/checkpoints/nlvr/coverage_SORT \
+    --seed 1337
+```
+
+
+
+
+
  
  
