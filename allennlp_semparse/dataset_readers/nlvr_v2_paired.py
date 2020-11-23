@@ -136,12 +136,12 @@ class NlvrV2PairedDatasetReader(DatasetReader):
                 target_sequences: List[List[str]] = data.get("correct_sequences", None)
 
                 # Not all training instances would have this
-                paired_example: Dict = data.get("paired_example", None)
+                paired_examples: List[Dict] = data.get("paired_examples", None)
 
                 instance = self.text_to_instance(
                     sentence,
                     structured_representations,
-                    paired_example,
+                    paired_examples,
                     labels,
                     target_sequences,
                     identifier,
@@ -155,7 +155,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         self,  # type: ignore
         sentence: str,
         structured_representations: List[List[List[JsonDict]]],
-        paired_example: Dict = None,
+        paired_examples: List[Dict] = None,
         labels: List[str] = None,
         target_sequences: List[List[str]] = None,
         identifier: str = None,
@@ -247,75 +247,102 @@ class NlvrV2PairedDatasetReader(DatasetReader):
             )
             fields["labels"] = labels_field
 
-        if paired_example is not None:
+        paired_identifiers: List[str] = []
+        paired_sentences: List[str] = []
+        paired_structured_representations: List[List[Dict]] = []
+        paired_labels: List[List[str]] = []
+        original_charoffsets: List[Tuple[int, int]] = []
+        paired_charoffsets: List[Tuple[int, int]] = []
+        paired_masks: List[int] = []
+        if paired_examples is not None:
             # Process paired example:
-            paired_identifer = paired_example["identifier"]
-            paired_sentence = paired_example["sentence"]
-            paired_structured_representations = paired_example["structured_representations"]
-            paired_labels = paired_example["labels"]
-            original_charoffsets: Tuple[int, int] = paired_example["orig_charoffsets"]
-            paired_charoffets: Tuple[int, int] = paired_example["paired_charoffsets"]
-            paired_target_sequences: List[List[str]] = paired_example.get("correct_sequences", None)
-            if paired_target_sequences is not None:
-                paired_action_sequence_fields = candidate_sequences_to_action_sequences_field(
-                    paired_target_sequences, instance_action_ids, action_field
-                )
-            else:
-                paired_action_sequence_fields = [ListField([IndexField(-1, action_field)])]
-            paired_mask = 1
-            self.num_paired_examples += 1
+            for paired_example in paired_examples:
+                paired_identifiers.append(paired_example["identifier"])
+                paired_sentences.append(paired_example["sentence"])
+                paired_structured_representations.append(paired_example["structured_representations"])
+                paired_labels.append(paired_example["labels"])
+                original_charoffsets.append(paired_example["orig_charoffsets"])
+                paired_charoffsets.append(paired_example["paired_charoffsets"])
+                paired_masks.append(1)
+                self.num_paired_examples += 1
         else:
-            paired_identifer = "N/A"
-            paired_sentence = "NONE"
-            paired_structured_representations = []
-            paired_labels = []
-            original_charoffsets = (-1, -1)
-            paired_charoffets = (-1, -1)
-            paired_action_sequence_fields = [ListField([IndexField(-1, action_field)])]
-            paired_mask = 0
-        paired_mask_field = ArrayField(np.array(paired_mask))
-        tokenized_paired_sentence: List[Token] = self._tokenizer.tokenize(paired_sentence)
-        paired_sentence_field = TextField(
-            tokenized_paired_sentence, self._sentence_token_indexers
-        )
+            paired_identifiers.append("N/A")
+            paired_sentences.append("NONE")
+            paired_structured_representations.append([])
+            paired_labels.append([])
+            original_charoffsets.append((-1, -1))
+            paired_charoffsets.append((-1, -1))
+            paired_masks.append(0)
 
-        paired_worlds = structured_representations_to_worlds(paired_structured_representations)
-        if not paired_worlds:
-            # Pad with an empty world
-            paired_worlds.append(NlvrLanguageFuncComposition(set({})))
-            paired_labels.append("false")
-        paired_worlds_field = ListField([MetadataField(world) for world in paired_worlds])
-        paired_labels_field = ListField(
-            [LabelField(label, label_namespace="denotations") for label in paired_labels]
-        )
+        # paired_mask_field = ArrayField(np.array(paired_masks))
+        paired_masks_field = MetadataField(paired_masks)
+        paired_sentences_fieldlist = []
+        tokenized_paired_sentences = []     # needed later to convert char-offsets to token-offsets
+        for paired_sentence in paired_sentences:
+            tokenized_paired_sentence: List[Token] = self._tokenizer.tokenize(paired_sentence)
+            paired_sentence_field = TextField(
+                tokenized_paired_sentence, self._sentence_token_indexers
+            )
+            tokenized_paired_sentences.append(tokenized_paired_sentence)
+            paired_sentences_fieldlist.append(paired_sentence_field)
+        paired_sentences_field = ListField(paired_sentences_fieldlist)
+
+        paired_worlds: List[List[NlvrLanguageFuncComposition]] = []
+        for ps_structured_representations in paired_structured_representations:
+            # ps_structured_representations is a List[Dict]: List of worlds for one paired sentence
+            ps_worlds: List[NlvrLanguageFuncComposition] = structured_representations_to_worlds(
+                ps_structured_representations)
+            paired_worlds.append(ps_worlds)
+            # if ps_worlds:
+            #     paired_worlds.append(ps_worlds)
+            # else:
+            #     # if ps_worlds is empty, means ps_structured_representations is empty =>
+        paired_worlds_field = MetadataField(paired_worlds)
+
+        # if not paired_worlds:
+        #     # Pad with an empty world
+        #     paired_worlds.append(NlvrLanguageFuncComposition(set({})))
+        #     paired_labels.append("false")
+        # paired_worlds_field = ListField([MetadataField(world) for world in paired_worlds])
+
+        # paired_labels_listfield = []
+        # for ps_labels in paired_labels:
+        #     ps_labels_field = ListField(
+        #         [LabelField(label, label_namespace="denotations") for label in ps_labels]
+        #     )
+        #     print(ps_labels_field)
+        #     paired_labels_listfield.append(ps_labels_field)
+        # paired_labels_field = ListField(paired_labels_listfield)
+        paired_labels_field = MetadataField(paired_labels)
 
         # Token offset end is _inclusive_
-        original_tokenidxs = [
-            charidx_to_tokenidx(tokenized_sentence, original_charoffsets[0]),
-            charidx_to_tokenidx(tokenized_sentence, original_charoffsets[1]),
+        original_tokenidxs: List[Tuple[int, int]] = [
+            (charidx_to_tokenidx(tokenized_sentence, charoffsets[0]),
+             charidx_to_tokenidx(tokenized_sentence, charoffsets[1]))
+            for charoffsets in original_charoffsets
         ]
         original_tokenoffsets_field = MetadataField(original_tokenidxs)
-        paired_tokenidxs = [
-            charidx_to_tokenidx(tokenized_paired_sentence, paired_charoffets[0]),
-            charidx_to_tokenidx(tokenized_paired_sentence, paired_charoffets[1]),
+        paired_tokenidxs: List[Tuple[int, int]] = [
+            (charidx_to_tokenidx(tokenized_paired_sentences[i], charoffsets[0]),
+             charidx_to_tokenidx(tokenized_paired_sentences[i], charoffsets[1]))
+            for i, charoffsets in enumerate(paired_charoffsets)
         ]
         paired_tokenoffsets_field = MetadataField(paired_tokenidxs)
 
         paired_fields: Dict[str, Field] = {
-            "paired_mask": paired_mask_field,
-            "paired_identifier": MetadataField(paired_identifer),
-            "paired_sentence": paired_sentence_field,
+            "paired_masks": paired_masks_field,
+            "paired_identifiers": MetadataField(paired_identifiers),
+            "paired_sentences": paired_sentences_field,
             "paired_worlds": paired_worlds_field,
             "paired_labels": paired_labels_field,
             "original_tokenoffsets": original_tokenoffsets_field,
             "paired_tokenoffsets": paired_tokenoffsets_field,
-            "paired_target_action_sequences": ListField(paired_action_sequence_fields)
         }
         fields.update(paired_fields)
         # Even though metadata has been added to fields, since it's dict,
         # it should still get updated
-        metadata["paired_sentence"] = paired_sentence
-        metadata["paired_sentence_tokens"] = [x.text for x in tokenized_paired_sentence]
+        metadata["paired_sentences"] = paired_sentences
+        # metadata["paired_sentence_tokens"] = [x.text for x in tokenized_paired_sentence]
 
         return Instance(fields)
 

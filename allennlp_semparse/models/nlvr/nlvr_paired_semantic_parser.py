@@ -25,6 +25,7 @@ from allennlp_semparse.state_machines.trainers import (
 )
 from allennlp_semparse.common import ParsingError, ExecutionError
 from allennlp_semparse.state_machines.transition_functions import BasicTransitionFunction
+from allennlp_semparse.models.nlvr.paired_examples_utils import get_programs_for_paired_examples
 
 logger = logging.getLogger(__name__)
 
@@ -188,14 +189,13 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         identifier: List[str] = None,
         target_action_sequences: torch.LongTensor = None,
         labels: torch.LongTensor = None,
-        paired_mask: torch.LongTensor = None,
-        paired_identifier: List[str] = None,
-        paired_sentence: Dict[str, torch.LongTensor] = None,
-        paired_worlds: List[List[NlvrLanguageFuncComposition]] = None,
-        paired_labels: torch.LongTensor = None,
-        original_tokenoffsets: List[Tuple[int, int]] = None,
-        paired_tokenoffsets: List[Tuple[int, int]] = None,
-        paired_target_action_sequences: torch.LongTensor = None,
+        paired_masks: List[List[int]] = None,
+        paired_identifiers: List[List[str]] = None,
+        paired_sentences: Dict[str, torch.LongTensor] = None,
+        paired_worlds: List[List[List[NlvrLanguageFuncComposition]]] = None,
+        paired_labels: List[List[List[str]]] = None,
+        original_tokenoffsets: List[List[Tuple[int, int]]] = None,
+        paired_tokenoffsets: List[List[Tuple[int, int]]] = None,
         metadata: List[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -223,49 +223,32 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
             extras=label_strings,
         )
 
-        paired_examples_output = None
+        batchidx2paired_programs = None
         if self.training:
-            paired_label_strings = self._get_label_strings(paired_labels) if paired_labels is not None else None
-            # TODO(nitish): Running beam search for all paired-instances, even padded ones. Maybe fix this
-            # Setup for paired-example
-            paired_initial_state = self.get_initial_grammar_state(
-                sentence=paired_sentence,
-                worlds=paired_worlds,
-                labels=paired_labels,
-                actions=actions,
+            # batchidx: List[paired_program]
+            # Here each paired_program is a dict
+            # {
+            #   "action_sequence": List[int],
+            #   "score": torch.Tensor,
+            #   "debug_info": List[Dict] debug_info
+            #   "original_tokenoffset": Tuple[int, int],
+            #   "paired_tokenoffset": Tuple[int, int],
+            #   "paired_idx": the idx of the paired_example (for this batch_idx) for which this program is a parse
+            # }
+            # Caveat: since we're merging programs from all paired examples, "score" is no longer a prob-dist over this
+            # list
+            batchidx2paired_programs = get_programs_for_paired_examples(
+                self,
+                actions,
+                paired_masks,
+                paired_identifiers,
+                paired_sentences,
+                paired_worlds,
+                paired_labels,
+                original_tokenoffsets,
+                paired_tokenoffsets,
+                metadata,
             )
-            paired_initial_state.debug_info = [[] for _ in range(batch_size)]
-            best_paired_final_states = self._beam_search.search(
-                num_steps=self._max_decoding_steps,
-                initial_state=paired_initial_state,
-                transition_function=self._decoder_step,
-                keep_final_unfinished_states=False,
-            )
-
-            # For paired examples, we keep ALL CONSISTENT PROGRAMS in the beam and their score
-            paired_outputs = self._get_action_sequences_and_scores_from_final_states(
-                batch_size=batch_size,
-                best_final_states=best_paired_final_states,
-                instance_mask=paired_mask,
-                all_worlds=paired_worlds,
-                all_label_strings=paired_label_strings,
-                keep_only_consistent_programs=True
-            )
-            paired_action_sequences: Dict[int, List[List[int]]] = paired_outputs[0]
-            paired_action_scores: Dict[int, List[torch.Tensor]] = paired_outputs[1]
-            paired_debug_infos: Dict[int, List[List[Dict]]] = paired_outputs[2]
-
-            paired_examples_output = {
-                "mask": paired_mask,
-                "action_sequences": paired_action_sequences,
-                "action_scores": paired_action_scores,
-                "debug_infos": paired_debug_infos,
-                "worlds": paired_worlds,
-                "labels": paired_label_strings,
-                "original_tokenoffsets": original_tokenoffsets,
-                "paired_tokenoffsets": paired_tokenoffsets,
-                "metadata": metadata
-            }
 
         #if not self.training:
             # might be needed for estimating alignment in paired training
@@ -284,7 +267,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         best_debug_infos: Dict[int, List[List[Dict]]] = original_outputs[2]
 
         finished_costs: Dict[int, List[torch.Tensor]] = self._get_costs_by_batch(
-            best_final_states, partial(self._get_state_cost, worlds, paired_examples_output)
+            best_final_states, partial(self._get_state_cost, worlds, batchidx2paired_programs)
         )
 
         loss = initial_state.score[0].new_zeros(1)
@@ -375,14 +358,14 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         self,
         sentence: Dict[str, torch.LongTensor],
         worlds: List[List[NlvrLanguageFuncComposition]],
-        labels: torch.LongTensor,
+        label_strings: List[List[str]],
         actions: List[List[ProductionRule]],
     ) -> GrammarBasedState:
         batch_size = len(worlds)
         initial_rnn_state = self._get_initial_rnn_state(sentence)
         token_ids = util.get_token_ids_from_text_field_tensors(sentence)
         initial_score_list = [token_ids.new_zeros(1, dtype=torch.float) for i in range(batch_size)]
-        label_strings = self._get_label_strings(labels) if labels is not None else None
+        # label_strings = self._get_label_strings(labels) if labels is not None else None
         # Assuming all worlds give the same set of valid actions. Doesn't matter even if worlds[i][0] is padded
         initial_grammar_state = [
             self._create_grammar_state(worlds[i][0], actions[i]) for i in range(batch_size)
@@ -488,7 +471,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
     def _get_state_cost(
         self,
         batch_worlds: List[List[NlvrLanguageFuncComposition]],
-        paired_examples_output: Dict,
+        batchidx2paired_programs: Dict[int, List[Dict]],
         state: GrammarBasedState,
     ) -> torch.Tensor:
         """
@@ -527,14 +510,17 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
             # Cost since sequence is not consistent
             cost = denotation_cost   # + 1.0
 
-        if paired_examples_output is None:
+        if batchidx2paired_programs is None:
             # In non-training mode
             return cost
-        paired_mask = paired_examples_output["mask"][batch_index]
-        if paired_mask == 0 or batch_index not in paired_examples_output["action_sequences"]:
-            # This training instance doesn't have paired example OR
-            # no programs were decoded for the paired example
+
+        if batch_index not in batchidx2paired_programs:
             return cost
+
+        # if paired_mask == 0 or batch_index not in paired_examples_output["action_sequences"]:
+        #     # This training instance doesn't have paired example OR
+        #     # no programs were decoded for the paired example
+        #     return cost
 
         # Assuming global actions only shared by all
         all_actions = state.possible_actions[0]
@@ -544,26 +530,30 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         original_debug_info: List[Dict] = state.debug_info[0]
 
         # All these paired programs ARE CONSISTENT
-        paired_action_sequences: List[List[int]] = paired_examples_output["action_sequences"][batch_index]
-        paired_action_scores: List[torch.Tensor] = paired_examples_output["action_scores"][batch_index]
+        paired_action_sequences: List[List[int]] = [p["action_indices"] for p in batchidx2paired_programs[batch_index]]
+        paired_action_scores: List[torch.Tensor] = [p["score"] for p in batchidx2paired_programs[batch_index]]
         logprobs = torch.cat([tensor.view(-1) for tensor in paired_action_scores])
+        # TODO(nitish): Caveat: programs from different paired_examples are merged. we are normalized probabilities
+        #  across examples below; which is not really probability anymore. E.g. logprobs could be [log(0.9), log(0.9)]
+        #  which will get converted to [0.5, 0.5]
         paired_action_probs = util.masked_softmax(logprobs, None)
 
-        paired_debug_infos: List[List[Dict]] = paired_examples_output["debug_infos"][batch_index]
-        paired_worlds: List[NlvrLanguageFuncComposition] = paired_examples_output["worlds"][batch_index]
-        paired_labels: List[str] = paired_examples_output["labels"][batch_index]
-        num_paired_progs = len(paired_action_sequences)
-
+        paired_debug_infos: List[List[Dict]] = [p["debug_info"] for p in batchidx2paired_programs[batch_index]]
         # (start, end) both _inclusive_
-        original_tokenoffsets: Tuple[int, int] = paired_examples_output["original_tokenoffsets"][batch_index]
-        paired_tokenoffsets: Tuple[int, int] = paired_examples_output["paired_tokenoffsets"][batch_index]
-        metadata: Dict = paired_examples_output["metadata"][batch_index]
+        original_tokenoffsets: List[Tuple[int, int]] = [p["original_tokenoffset"] for p in
+                                                        batchidx2paired_programs[batch_index]]
+        # TODO(nitish): Taking [0] original_tokenoffset since all of them should be equal. add check?
+        original_tokenoffset = original_tokenoffsets[0]
+        paired_tokenoffsets: List[Tuple[int, int]] = [p["paired_tokenoffset"] for p in
+                                                      batchidx2paired_programs[batch_index]]
+        num_paired_progs = len(batchidx2paired_programs[batch_index])
+        # metadata: Dict = paired_examples_output["metadata"][batch_index]
 
         original_relevant_decoding_steps, orig_alignment_scores = self.get_relevant_decoding_steps(
-            original_tokenoffsets, original_debug_info, threshold=0.6)
+            original_tokenoffset, original_debug_info, threshold=0.5)
         relevant_actions = [original_actions[x] for x in original_relevant_decoding_steps]
         # print("--------")
-        # print(paired_worlds[0].action_sequence_to_logical_form(original_actions))
+        # print(batch_worlds[0][0].action_sequence_to_logical_form(original_actions))
         # print(relevant_actions)
 
         share_ratios = [0.0 for _ in range(num_paired_progs)]
@@ -573,16 +563,23 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 p_actions: List[str] = [all_actions[action][0] for action in p_action_seq]
                 p_debug_info = paired_debug_infos[pidx]
                 p_relevant_decoding_steps, p_alignment_scores = self.get_relevant_decoding_steps(
-                    paired_tokenoffsets, p_debug_info, threshold=0.6)
+                    paired_tokenoffsets[pidx], p_debug_info, threshold=0.5)
                 p_relevant_actions = [p_actions[x] for x in p_relevant_decoding_steps]
                 # Score between [0, 1], ratio of original relevant actions found in paired relevant actions
                 share_ratio = float(len(self.common_elements(relevant_actions,
                                                              p_relevant_actions)))/len(relevant_actions)
                 share_ratios[pidx] = share_ratio
+                # print("Paired relevant: {}".format(p_relevant_actions))
+                # print(share_ratio)
+
             share_ratios = paired_action_probs.new_tensor(share_ratios)
             # Within range [0, 1], 1 indicating maximum sharing between original and paired program
             share_score = paired_action_probs.dot(share_ratios)
             paired_cost = 1.0 - share_score
+            # print(paired_action_probs)
+            # print(share_ratios)
+            # print(paired_cost)
+            # pdb.set_trace()
         else:
             paired_cost = state.score[0].new_zeros(1)
 

@@ -27,7 +27,7 @@ def get_metrics(metrics_json):
     return denotation_acc, consistency
 
 
-def print_iterative_training_metrics(checkpoint_dir, all_max_decoding_steps=[10, 12, 14, 16, 18, 20, 22]):
+def print_iterative_training_metrics(checkpoint_dir, all_max_decoding_steps=[12, 14, 16, 18, 20, 22]):
     """Iteratively train a parer by alternating between MML and ERM parsers.
 
     The directory structure inside checkpoint root is:

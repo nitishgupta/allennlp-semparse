@@ -30,9 +30,9 @@ class NlvrInstance:
         # if "correct_sequences" in instance_dict:
         self.correct_candidate_sequences = instance_dict.get("correct_sequences", None)
 
-        # Should have keys like: identifier, sentence, structured_representations, labels,
+        # Should have keys: identifier, sentence, structured_representations, labels,
         # orig_charoffsets, paired_charoffsets
-        self.paired_example: Dict = instance_dict.get("paired_example", None)
+        self.paired_examples: List[Dict] = instance_dict.get("paired_examples", None)
 
         # Store extra stuff from the instance not covered above
         self.extras = {}
@@ -50,8 +50,8 @@ class NlvrInstance:
         output_dict.update(self.extras)
         if self.correct_candidate_sequences is not None:
             output_dict["correct_sequences"] = self.correct_candidate_sequences
-        if self.paired_example is not None:
-            output_dict["paired_example"] = self.paired_example
+        if self.paired_examples is not None:
+            output_dict["paired_examples"] = self.paired_examples
 
         return output_dict
 
@@ -71,10 +71,10 @@ def print_dataset_stats(instances: List[NlvrInstance]):
     for instance in instances:
         if instance.correct_candidate_sequences is not None:
             num_w_correct_sequences += 1
-        if instance.paired_example is not None and instance.paired_example:
-            num_pairings += 1
+        if instance.paired_examples is not None:
+            num_pairings += len(instance.paired_examples)
 
-    print("Total instances: {}  Num w/ program-candidates: {}  Num w/ paired examples: {}".format(
+    print("Total instances: {}  Num w/ program-candidates: {}  Num w/ paired example pairings: {}".format(
         num_instances, num_w_correct_sequences, num_pairings
     ))
 

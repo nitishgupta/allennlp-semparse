@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import sys
 import os
 import json
@@ -126,7 +126,7 @@ def convert_abstract_phrase_to_grounded(abstract_phrases: List[str]) -> List[Lis
     return grounded_phrases_sets
 
 
-def get_contained_span(sentence: str, phrases: List[str]):
+def get_contained_span(sentence: str, phrases: List[str]) -> Tuple[int, int]:
     """Get the position of the longest contained span in the sentence from a span in phrases."""
     # Sorting phrases in decreasing order of length; to select "yellow squares" over "yellow square"
     sorted_phrases = sorted(phrases, key=lambda x: len(x), reverse=True)
@@ -141,8 +141,8 @@ def get_contained_span(sentence: str, phrases: List[str]):
 
 
 def sample_paired_instance(identifier: str, paired_identifiers: List[str], paired_phrases: List[str],
-                           id2instance: Dict[str, NlvrInstance]):
-    """Sample a paired instance for a given instance from a list of instances.
+                           id2instance: Dict[str, NlvrInstance], max_samples_per_phrase: int):
+    """Sample `max_samples_per_phrase` paired instances for a given instance from a list of instances.
 
     The instances `identifier` and `paired_identifiers` are known to all share a paired-phrase from `paired_phrases`.
     The exact phrase might be different; for example identifier might have `yellow block at the base` and an instance
@@ -152,28 +152,43 @@ def sample_paired_instance(identifier: str, paired_identifiers: List[str], paire
     tries = 100
     trynum = 0
     instance = id2instance[identifier]
-    paired_identifier = None
-    orig_char_offsets = None
-    paired_char_offsets = None
-    while paired_identifier is None and trynum < tries:
+    sampled_identifiers = []
+    all_orig_char_offsets: List[Tuple[int, int]] = []
+    all_paired_char_offsets: List[Tuple[int, int]] = []
+    # paired_identifier = None
+    # orig_char_offsets = None
+    # paired_char_offsets = None
+    while len(sampled_identifiers) < max_samples_per_phrase and trynum < tries:
+        trynum += 1
         sampled_id = random.choice(paired_identifiers)
         sampled_instance = id2instance[sampled_id]
-        if sampled_instance.sentence != instance.sentence:
-            # Making sure not the same instance or sentence.
-            # Now need to find the paired-spans
+        # Check not the same sentence or already sampled
+        if sampled_instance.sentence != instance.sentence and sampled_id not in sampled_identifiers:
+            # Get paired phrase char-offsets in original and sampled instance
             orig_char_offsets = get_contained_span(instance.sentence, paired_phrases)
             paired_char_offsets = get_contained_span(sampled_instance.sentence, paired_phrases)
             if orig_char_offsets != [-1, -1] and paired_char_offsets != [-1, -1]:
-                paired_identifier = sampled_instance.identifier
+                sampled_identifiers.append(sampled_id)
+                all_orig_char_offsets.append(orig_char_offsets)
+                all_paired_char_offsets.append(paired_char_offsets)
 
-    return paired_identifier, orig_char_offsets, paired_char_offsets
+    return sampled_identifiers, all_orig_char_offsets, all_paired_char_offsets
 
 
 def make_data(
     data_jsonl: str,
     paired_phrases_json: str,
     output_jsonl: str,
+    max_samples_per_phrase: int = 1,
+    max_samples_per_instance: int = 1,
 ) -> None:
+    """Discover and add paired examples for NLVR instances.
+    Given sets of abstract paired phrases, first create sets of equivalent grounded phrases and identify instances that
+    have these phrases.
+
+    Using these sets, sample instance pairings that contain the same grounded phrase.
+    """
+
     nlvr_instances: List[NlvrInstance] = read_nlvr_data(data_jsonl)
     id2instance: Dict[str, NlvrInstance] = {instance.identifier: instance for instance in nlvr_instances}
 
@@ -216,41 +231,55 @@ def make_data(
     avg_grounded_phrases_per_set = float(num_grounded_phrases) / num_abstract_phrases
     print(
         "Paired phrases generated. Num of equivalent grounded phrases: {}  "
-        "Avg num of grounded phrases per set:{}".format(
+        "Avg num of grounded phrases per set: {}".format(
             num_abstract_phrases, avg_grounded_phrases_per_set
         )
     )
 
-    num_pairings_made = 0
+    # For each paired-phrase (grounded), sample, for instance sample `max_samples_per_phrase` paired instances
+    num_pairings_found = 0
     for paired_phrase in paired_phrases:
-        # For each phrase, pair each instance having it with some other instance with the same phrase
+        # Pair each instance containing this paired_phrase to `max_samples_per_phrase` other instances containing it
         paired_identifiers: List[str] = paired_phrase.identifiers
         for identifier in paired_phrase.identifiers:
             instance: NlvrInstance = id2instance[identifier]
-            if instance.paired_example is not None:
-                # Instance already has a paired example
-                continue
-            # For this instance, sample a paired instance from paired_identifiers
-            paired_id, orig_charoffsets, paired_charoffsets = sample_paired_instance(identifier,
-                                                                                     paired_identifiers,
-                                                                                     paired_phrase.grounded_phrases,
-                                                                                     id2instance)
-            if paired_id is not None:
-                # Found a paired instance; add it
-                paired_instance: NlvrInstance = id2instance[paired_id]
-                instance.paired_example = {
-                    "identifier": paired_id,
-                    "sentence": paired_instance.sentence,
-                    "structured_representations": paired_instance.structured_representations,
-                    "labels": paired_instance.labels,
-                    "orig_charoffsets": orig_charoffsets,
-                    "paired_charoffsets": paired_charoffsets,
-                }
-                if paired_instance.correct_candidate_sequences is not None:
-                    instance.paired_example["correct_sequences"] = paired_instance.correct_candidate_sequences
-                num_pairings_made += 1
+            if instance.paired_examples is None:
+                instance.paired_examples = []
+            # For this instance, sample paired instances from paired_identifiers
+            # paired_ids: List[str], all_orig_charoffsets & all_orig_charoffsets: List[Tuple[int, int]]
+            paired_ids, all_orig_charoffsets, all_paired_charoffsets = sample_paired_instance(
+                identifier, paired_identifiers, paired_phrase.grounded_phrases, id2instance, max_samples_per_phrase)
+            if paired_ids:
+                for paired_id, orig_charoffsets, paired_charoffsets in zip(paired_ids,
+                                                                           all_orig_charoffsets,
+                                                                           all_paired_charoffsets):
+                    # Found a paired instance; add it
+                    paired_instance: NlvrInstance = id2instance[paired_id]
+                    paired_example = {
+                        "identifier": paired_id,
+                        "sentence": paired_instance.sentence,
+                        "structured_representations": paired_instance.structured_representations,
+                        "labels": paired_instance.labels,
+                        "orig_charoffsets": orig_charoffsets,
+                        "paired_charoffsets": paired_charoffsets,
+                    }
+                    instance.paired_examples.append(paired_example)
+                    num_pairings_found += 1
 
-    print("Num of pairings made: {}".format(num_pairings_made))
+    print("Num of pairings found: {}".format(num_pairings_found))
+    # Keep only `max_samples_per_instance` paired instances per example
+    print("Pruning to have maximum {} paired examples per instance ...".format(max_samples_per_instance))
+    num_pairing_made = 0
+    instance_w_pairs = 0
+    for identifier, instance in id2instance.items():
+        if instance.paired_examples:
+            instance_w_pairs += 1
+            random.shuffle(instance.paired_examples)
+            instance.paired_examples = instance.paired_examples[:max_samples_per_instance]
+            num_pairing_made += len(instance.paired_examples)
+
+    print("Number of instances with pairings: {}".format(instance_w_pairs))
+    print("Number of pairings made: {}".format(num_pairing_made))
 
     final_instances = [instance for _, instance in id2instance.items()]
     print_dataset_stats(final_instances)
@@ -270,5 +299,20 @@ if __name__ == "__main__":
         type=str,
         help="Path to archived model.tar.gz to use for decoding",
     )
+    parser.add_argument(
+        '--max_samples_per_phrase',
+        type=int,
+        default=1,
+        help="For each grounded phrase, sample these many paired instances per instance"
+    )
+    parser.add_argument(
+        '--max_samples_per_instance',
+        type=int,
+        default=1,
+        help="Max number of paired instance per example"
+    )
+
     args = parser.parse_args()
-    make_data(args.data_jsonl, args.paired_phrases_json, args.output_jsonl)
+    make_data(args.data_jsonl, args.paired_phrases_json, args.output_jsonl,
+              max_samples_per_phrase=args.max_samples_per_phrase,
+              max_samples_per_instance=args.max_samples_per_instance)
