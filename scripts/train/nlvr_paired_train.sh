@@ -12,7 +12,7 @@ INCLUDE_PACKAGE=allennlp_semparse
 CONFIGFILE=training_config/nlvr_paired_parser.jsonnet
 
 # DATA PATH
-export TRAIN_DATA=./resources/data/nlvr/processed/paired_data/train_v1_multiple.json
+export TRAIN_DATA=./resources/data/nlvr/processed/paired_data/train_v1_P2_M3.json
 export DEV_DATA=./resources/data/nlvr/processed/dev_grouped.json
 
 # HYPER-PARAMETERS
@@ -21,7 +21,7 @@ export MDS=14
 export EPOCHS=50
 export SEED=1337
 
-export MML_MODEL_TAR=./resources/checkpoints/mml_parser/nlvr/agenda_v6_ML11/MDS_18/S_42/model.tar.gz
+export MML_MODEL_TAR=./resources/checkpoints/nlvr/pairedv1_SORT_SD_T05_P2M3/SEED_21/MML/Iter3_MDS18/model.tar.gz
 
 # SERIALIZATION PATH
 CHECKPOINT_ROOT=./resources/checkpoints

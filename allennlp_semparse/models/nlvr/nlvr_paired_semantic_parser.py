@@ -73,6 +73,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         normalize_beam_score_by_length: bool = False,
         max_num_finished_states: int = None,
         dropout: float = 0.0,
+        paired_treshold: float = 0.6,
         initial_mml_model_file: str = None,
     ) -> None:
         super(NlvrPairedSemanticParser, self).__init__(
@@ -106,6 +107,8 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         # self._decoder_beam_search = decoder_beam_search
         self._max_decoding_steps = max_decoding_steps
         self._action_padding_index = -1
+
+        self._paired_treshold = paired_treshold
 
         # TODO (pradeep): Checking whether file exists here to avoid raising an error when we've
         # copied a trained ERM model from a different machine and the original MML model that was
@@ -267,7 +270,8 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         best_debug_infos: Dict[int, List[List[Dict]]] = original_outputs[2]
 
         finished_costs: Dict[int, List[torch.Tensor]] = self._get_costs_by_batch(
-            best_final_states, partial(self._get_state_cost, worlds, batchidx2paired_programs)
+            best_final_states, partial(self._get_state_cost, worlds, batchidx2paired_programs, metadata,
+                                       self._paired_treshold)
         )
 
         loss = initial_state.score[0].new_zeros(1)
@@ -472,6 +476,8 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         self,
         batch_worlds: List[List[NlvrLanguageFuncComposition]],
         batchidx2paired_programs: Dict[int, List[Dict]],
+        metadata: List[Dict],
+        paired_treshold: float,
         state: GrammarBasedState,
     ) -> torch.Tensor:
         """
@@ -550,11 +556,15 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         # metadata: Dict = paired_examples_output["metadata"][batch_index]
 
         original_relevant_decoding_steps, orig_alignment_scores = self.get_relevant_decoding_steps(
-            original_tokenoffset, original_debug_info, threshold=0.5)
+            original_tokenoffset, original_debug_info, threshold=paired_treshold)
         relevant_actions = [original_actions[x] for x in original_relevant_decoding_steps]
-        # print("--------")
+        # import pdb
+        # print("\n--------")
+        # print(metadata[batch_index])
         # print(batch_worlds[0][0].action_sequence_to_logical_form(original_actions))
+        # print(original_relevant_decoding_steps)
         # print(relevant_actions)
+        # print("\npaired action .... ")
 
         share_ratios = [0.0 for _ in range(num_paired_progs)]
         if relevant_actions:
@@ -563,20 +573,26 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 p_actions: List[str] = [all_actions[action][0] for action in p_action_seq]
                 p_debug_info = paired_debug_infos[pidx]
                 p_relevant_decoding_steps, p_alignment_scores = self.get_relevant_decoding_steps(
-                    paired_tokenoffsets[pidx], p_debug_info, threshold=0.5)
-                p_relevant_actions = [p_actions[x] for x in p_relevant_decoding_steps]
+                    paired_tokenoffsets[pidx], p_debug_info, threshold=paired_treshold)
+                p_relevant_actions = []
+                for stepnum in p_relevant_decoding_steps:
+                    p_relevant_actions.append(p_actions[stepnum])
                 # Score between [0, 1], ratio of original relevant actions found in paired relevant actions
                 share_ratio = float(len(self.common_elements(relevant_actions,
                                                              p_relevant_actions)))/len(relevant_actions)
                 share_ratios[pidx] = share_ratio
+                # print(batch_worlds[0][0].action_sequence_to_logical_form(p_actions))
+                # print(p_relevant_decoding_steps)
+                # print(p_relevant_actions)
+                # print(share_ratio)
+                # pdb.set_trace()
+
                 # print("Paired relevant: {}".format(p_relevant_actions))
                 # print(share_ratio)
-
             share_ratios = paired_action_probs.new_tensor(share_ratios)
             # Within range [0, 1], 1 indicating maximum sharing between original and paired program
             share_score = paired_action_probs.dot(share_ratios)
             paired_cost = 1.0 - share_score
-            # print(paired_action_probs)
             # print(share_ratios)
             # print(paired_cost)
             # pdb.set_trace()
