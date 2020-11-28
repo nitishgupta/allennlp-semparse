@@ -73,7 +73,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         normalize_beam_score_by_length: bool = False,
         max_num_finished_states: int = None,
         dropout: float = 0.0,
-        paired_treshold: float = 0.6,
+        paired_treshold: float = 0.7,
         initial_mml_model_file: str = None,
     ) -> None:
         super(NlvrPairedSemanticParser, self).__init__(

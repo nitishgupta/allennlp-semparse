@@ -630,35 +630,19 @@ class NlvrLanguageFuncComposition(DomainLanguage):
 
     @predicate
     def object_shape_same(self, objects: Set[Object]) -> bool:
-        # Empty set is True
-        if len(objects) == 0:
-            return True
-        else:
-            return self.object_shape_count_equals(1, objects)
+        return self.object_shape_count_equals(1, objects)
 
     @predicate
     def object_color_same(self, objects: Set[Object]) -> bool:
-        # Empty set is True
-        if len(objects) == 0:
-            return True
-        else:
-            return self.object_color_count_equals(1, objects)
+        return self.object_color_count_equals(1, objects)
 
     @predicate
     def object_shape_different(self, objects: Set[Object]) -> bool:
-        # Empty set is False
-        if len(objects) == 0:
-            return False
-        else:
-            return self.object_shape_count_not_equals(1, objects)
+        return self.object_shape_count_not_equals(1, objects)
 
     @predicate
     def object_color_different(self, objects: Set[Object]) -> bool:
-        # Empty set is False
-        if len(objects) == 0:
-            return False
-        else:
-            return self.object_color_count_not_equals(1, objects)
+        return self.object_color_count_not_equals(1, objects)
 
     @predicate
     def negate_filter(
