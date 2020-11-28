@@ -70,7 +70,8 @@ def print_dataset_stats(instances: List[NlvrInstance]):
     num_w_correct_sequences, num_pairings = 0, 0
     for instance in instances:
         if instance.correct_candidate_sequences is not None:
-            num_w_correct_sequences += 1
+            if len(instance.correct_candidate_sequences) > 0:
+                num_w_correct_sequences += 1
         if instance.paired_examples is not None:
             num_pairings += len(instance.paired_examples)
 

@@ -68,22 +68,48 @@ def get_structure(question: str):
     structure = structure.replace(" are ", " IS ")
     structure = structure.replace(" is ", " IS ")
 
-
-    print(question)
-    print(structure)
-    print()
-
     return structure
 
 
-def get_compgen_split(train_jsonl):
-    train_instances: List[NlvrInstance] = read_nlvr_data(train_jsonl)
-    print_dataset_stats(train_instances)
+def sample_dev_and_test_structures(structure2count, dev_target, test_target):
+    dev_structures = []
+    test_structures = []
 
+    remaining_structures = list(structure2count.keys())
+    random.shuffle(remaining_structures)
+
+    print("Starting to sample dev/test structures. Aiming for dev:{} and test:{} instances".format(dev_target,
+                                                                                                   test_target))
+
+    dev_count, test_count = 0, 0
+    while dev_count < dev_target or test_count < test_target:
+        if dev_count < dev_target:
+            sample_struct = random.choice(remaining_structures)
+            dev_structures.append(sample_struct)
+            dev_count += structure2count[sample_struct]
+            remaining_structures.remove(sample_struct)
+
+        if test_count < test_target:
+            sample_struct = random.choice(remaining_structures)
+            test_structures.append(sample_struct)
+            test_count += structure2count[sample_struct]
+            remaining_structures.remove(sample_struct)
+
+    return dev_count, dev_structures, test_count, test_structures
+
+
+
+
+def get_compgen_split(all_data_jsonl, output_dir):
+    all_instances: List[NlvrInstance] = read_nlvr_data(all_data_jsonl)
+    print_dataset_stats(all_instances)
+
+    identifier2instance = {}
     structure2identifiers = {}
     structure2count = {}
 
-    for instance in train_instances:
+    for instance in all_instances:
+        identifier2instance[instance.identifier] = instance
         structure = get_structure(instance.sentence)
         if structure not in structure2identifiers:
             structure2identifiers[structure] = []
@@ -95,25 +121,73 @@ def get_compgen_split(train_jsonl):
     print("Number of abstract structures : {}".format(num_structures))
 
     sorted_struc2count = sorted(structure2count.items(), key=lambda x: x[1], reverse=True)
-    truncated_sorted_struc2count = [(x,y) for (x,y) in sorted_struc2count if y > 2]
-    print(truncated_sorted_struc2count)
-    print(len(truncated_sorted_struc2count))
-    print()
+    structure2count_tuples = copy.deepcopy(sorted_struc2count)
 
-    mono_sorted_struc2count = [(x, y) for (x, y) in sorted_struc2count if y == 1]
-    print(mono_sorted_struc2count)
-    print(len(mono_sorted_struc2count))
+    # Keeping top-20 structures for training definitely
+    train_structures = [s for (s, c) in structure2count_tuples[0:20]]
+    structure2count_tuples = structure2count_tuples[20:]
 
-    multstructures = [structure for structure, count in structure2count.items() if count > 2]
-    # print(multstructures)
-    print(len(multstructures))
+    total_num_ques = len(all_instances)
+    remaining_structures = [s for (s, _) in structure2count_tuples]
+    # Sample test structures so that the # of utterances reaches a predefined target
+    test_target = int(0.08 * total_num_ques)    # 8% of total data is # test examples
+    test_structures = []
+    num_test_instances = 0
+    test_instance_ids = []
+    print("Sampling test-structs from {} structures, aiming for {} instances".format(len(remaining_structures),
+                                                                                     test_target))
+    while num_test_instances < test_target:
+        sample_struct = random.choice(remaining_structures)
+        test_structures.append(sample_struct)
+        test_instance_ids.extend(structure2identifiers[sample_struct])
+        num_test_instances += structure2count[sample_struct]
+        remaining_structures.remove(sample_struct)
 
+    print("Sampled {} test-structures totalling {} instances".format(len(test_structures),
+                                                                     len(test_instance_ids)))
+
+    remaining_instance_ids = [instance.identifier for instance in all_instances
+                              if instance.identifier not in test_instance_ids]
+    dev_target = int(0.08 * total_num_ques)  # 8% of total data is # test examples
+    print("Sampling {} dev-instances from {} remaining instances".format(dev_target, len(remaining_instance_ids)))
+    dev_instance_ids = random.sample(remaining_instance_ids, dev_target)
+    train_instance_ids = [i for i in remaining_instance_ids if i not in dev_instance_ids]
+
+    print("Train: {}  Dev: {}  Test: {}".format(len(train_instance_ids),
+                                                len(dev_instance_ids),
+                                                len(test_instance_ids)))
+
+    train_instances = [identifier2instance[i] for i in train_instance_ids]
+    dev_instances = [identifier2instance[i] for i in dev_instance_ids]
+    test_instances = [identifier2instance[i] for i in test_instance_ids]
+
+    os.makedirs(output_dir, exist_ok=True)
+    write_nlvr_data(train_instances, os.path.join(output_dir, "train.json"))
+    write_nlvr_data(dev_instances, os.path.join(output_dir, "dev.json"))
+    write_nlvr_data(test_instances, os.path.join(output_dir, "test.json"))
+
+
+    #
+    # truncated_sorted_struc2count = [(x,y) for (x,y) in sorted_struc2count if y > 2]
+    # print(truncated_sorted_struc2count)
+    # print(len(truncated_sorted_struc2count))
+    # print()
+    #
+    # mono_sorted_struc2count = [(x, y) for (x, y) in sorted_struc2count if y == 1]
+    # print(mono_sorted_struc2count)
+    # print(len(mono_sorted_struc2count))
+    #
+    # multstructures = [structure for structure, count in structure2count.items() if count > 2]
+    # # print(multstructures)
+    # print(len(multstructures))
+    #
 
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("train_jsonl", type=str, help="Input data file")
+    parser.add_argument("all_data_jsonl", type=str, help="Input data file")
+    parser.add_argument("output_dir", type=str, help="Output dir to write train.json, dev.json & test.json")
     # parser.add_argument(
     #     "paired_phrases_json",
     #     type=str,
@@ -138,4 +212,4 @@ if __name__ == "__main__":
     # )
 
     args = parser.parse_args()
-    get_compgen_split(train_jsonl=args.train_jsonl)
+    get_compgen_split(all_data_jsonl=args.all_data_jsonl, output_dir=args.output_dir)

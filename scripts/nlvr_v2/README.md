@@ -100,6 +100,61 @@ python scripts/train/iterative_train.py \
     --seed 1337
 ```
 
+## Compositional generalization
+
+###Abstract structures v1
+**Splitting data** 
+Construct abstract structures by masking colors, numbers, shapes, etc.
+Re-split all of NLVR data by sampling few structures for test, 
+and splitting the rest of the instances into train/dev.   
+
+The following command creates `train.json`, `dev.json` and `test.json` in `absstr_v1` 
+```
+python scripts/nlvr_v2/comp_gen/structural_compgen.py \
+    ./resources/data/nlvr/processed/all_data.json \
+    ./resources/data/nlvr/comp_gen/absstr_v1
+```
+
+**Search candidates**
+For the training instances, create `train_search_NEWLANG.json` that contains 
+program candidates from exhaustive-search for MML.
+
+The following command uses 
+`agendav6_SORT_ML11_SD/all_data.json` (which contains program candidates for all of the NLVR data)
+to write `train_search_NEWLANG.json` for instances in `absstr_v1/train.json`
+```
+python scripts/nlvr_v2/comp_gen/search_cands.py \
+    ./resources/data/nlvr/comp_gen/absstr_v1/train.json \
+    ./resources/data/nlvr/processed/agendav6_SORT_ML11_SD/all_data.json \
+    train_search_NEWLANG.json
+```
+
+**Paired examples**
+Same as before, generate data with paired examples using `generate_paired_data.py`
+```
+python scripts/nlvr_v2/paired_supervision/generate_paired_data.py \
+    ./resources/data/nlvr/comp_gen/absstr_v1/train.json \
+    scripts/nlvr_v2/data/paired_phrases_v1.json \
+    ./resources/data/nlvr/comp_gen/absstr_v1/train_paired_v1_P1M1.json \
+    --max_samples_per_phrase 1 \
+    --max_samples_per_instance 1
+```
+
+**Iterative parser training**
+Same as before, run `iterative_train.py` with appropriate input arguments:
+```
+python scripts/train/iterative_train.py \
+    --train_search_json ./resources/data/nlvr/comp_gen/absstr_v1/train_search_NEWLANG.json \
+    --dev_json ./resources/data/nlvr/comp_gen/absstr_v1/dev.json \
+    --erm_model paired \
+    --train_json ./resources/data/nlvr/comp_gen/absstr_v1/train_paired_v1_P1M1.json \
+    --ckpt_root ./resources/checkpoints/nlvr/comp-gen/absstr_v1/pairederm_NEWLANG_T07_P1M1 \
+    --seed 21
+```
+
+
+
+
 
 
 

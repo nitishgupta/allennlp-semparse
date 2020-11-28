@@ -12,9 +12,13 @@ INCLUDE_PACKAGE=allennlp_semparse
 
 SPLIT=test
 export DEV_DATA=./resources/data/nlvr/processed/${SPLIT}_grouped.json
+# IID
+# ./resources/data/nlvr/processed/${SPLIT}_grouped.json
+# Comp-gem
+# ./resources/data/nlvr/comp_gen/absstr_v1/${SPLIT}.json
 
 # MODEL PATH
-SERIALIZATION_DIR=./resources/checkpoints/nlvr/pairedv1_SORT_SD_01/SEED_1337/ERM/Iter5_MDS22
+SERIALIZATION_DIR=./resources/checkpoints/nlvr/pairedv1_SORT_SD_T07_P1M2/SEED_42/ERM/Iter5_MDS22
 MODEL_TAR_GZ=${SERIALIZATION_DIR}/model.tar.gz
 
 mkdir ${SERIALIZATION_DIR}/predictions

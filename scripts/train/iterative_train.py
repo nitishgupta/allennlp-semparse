@@ -224,7 +224,8 @@ if __name__=="__main__":
                         default="./resources/data/nlvr/processed/dev_grouped.json")
     parser.add_argument("--train_search_json", type=str, help="Processed output",
                         default="./resources/data/nlvr/processed/agenda_v6_ML11/train_grouped.json")
-    parser.add_argument("--erm_model", type=str, help="Which model to use for ERM model (paired/coverage)")
+    parser.add_argument("--erm_model", type=str, default="paired",
+                        help="Which model to use for ERM model (paired/coverage)")
     parser.add_argument("--ckpt_root", type=str, help="CKPT root")
     parser.add_argument("--seed", type=str, help="seed")
 
