@@ -211,7 +211,8 @@ def make_data(
             paired_nlvr_sentences: List[str] = []
             paired_identifiers: List[str] = []
             for instance in nlvr_instances:
-                if any([x in instance.sentence for x in grounded_set]):
+                if any([x in instance.sentence for x in grounded_set]) and \
+                        instance.identifier not in paired_identifiers:
                     paired_nlvr_sentences.append(instance.sentence)
                     paired_identifiers.append(instance.identifier)
             if len(paired_nlvr_sentences) < 2:
@@ -284,6 +285,18 @@ def make_data(
     final_instances = [instance for _, instance in id2instance.items()]
     print_dataset_stats(final_instances)
     write_nlvr_data(final_instances, output_jsonl)
+
+    output_stats_file = os.path.splitext(output_jsonl)[0] + "_stats.txt"
+    print("Writing stats to: {}".format(output_stats_file))
+    with open(output_stats_file, "w") as outfile:
+        outfile.write("max_samples_per_phrase: {}  ".format(max_samples_per_phrase))
+        outfile.write("max_samples_per_instance: {}\n".format(max_samples_per_instance))
+        outfile.write("Num of pairings found: {}\n".format(num_pairings_found))
+        # Keep only `max_samples_per_instance` paired instances per example
+        outfile.write("Pruning to have maximum {} paired examples per instance ...\n".format(max_samples_per_instance))
+        outfile.write("Number of instances with pairings: {}\n".format(instance_w_pairs))
+        outfile.write("Number of pairings made: {}\n".format(num_pairing_made))
+        outfile.write("Output json: {}".format(output_jsonl))
 
 
 if __name__ == "__main__":
