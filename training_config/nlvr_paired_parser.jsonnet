@@ -13,7 +13,7 @@ local mml_model = std.extVar("MML_MODEL_TAR");
     "lazy": false,
     "output_agendas": false,
     "mode": "train",
-//    "max_instances": 100,
+//    "max_instances": 500,
   },
   "validation_dataset_reader": {
     "type": "nlvr_v2_paired",
@@ -64,7 +64,7 @@ local mml_model = std.extVar("MML_MODEL_TAR");
   "trainer": {
     "checkpointer": {"num_serialized_models_to_keep": 1},
     "num_epochs": epochs,
-    "patience": 10,
+    "patience": 20,
     "cuda_device": cuda_device,
     "validation_metric": "+consistency",
     "optimizer": {

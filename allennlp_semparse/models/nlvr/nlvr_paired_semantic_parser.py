@@ -539,10 +539,15 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         paired_action_sequences: List[List[int]] = [p["action_indices"] for p in batchidx2paired_programs[batch_index]]
         paired_action_scores: List[torch.Tensor] = [p["score"] for p in batchidx2paired_programs[batch_index]]
         logprobs = torch.cat([tensor.view(-1) for tensor in paired_action_scores])
-        # TODO(nitish): Caveat: programs from different paired_examples are merged. we are normalized probabilities
+        # TODO(nitish): Caveat: programs from different paired_examples are merged. we are normalizing probabilities
         #  across examples below; which is not really probability anymore. E.g. logprobs could be [log(0.9), log(0.9)]
-        #  which will get converted to [0.5, 0.5]
-        paired_action_probs = util.masked_softmax(logprobs, None)
+        #  which will get converted to [0.5, 0.5].
+        #  Another caveat: if all consistent paired programs have very prediction proabability (logprobs = [log(0.01]),
+        #  they'll get re-normalized to ([1.0]) high values which might make paired-cost less trustworthy
+        normalized_paired_action_probs = util.masked_softmax(logprobs, None)
+        # These are raw program probabilites as predicted by decoder for the original paired example. This tensor is not
+        # a distribution.
+        paired_action_probs = torch.exp(logprobs)
 
         paired_debug_infos: List[List[Dict]] = [p["debug_info"] for p in batchidx2paired_programs[batch_index]]
         # (start, end) both _inclusive_
@@ -589,11 +594,14 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
 
                 # print("Paired relevant: {}".format(p_relevant_actions))
                 # print(share_ratio)
-            share_ratios = paired_action_probs.new_tensor(share_ratios)
+            share_ratios = normalized_paired_action_probs.new_tensor(share_ratios)
+
+            # TODO(nitish): TYPE 1 - use normalized program probs and compute expected share-score
             # Within range [0, 1], 1 indicating maximum sharing between original and paired program
-            share_score = paired_action_probs.dot(share_ratios)
+            share_score = normalized_paired_action_probs.dot(share_ratios)
             paired_cost = 1.0 - share_score
-            # print(share_ratios)
+
+            # print(share_score)
             # print(paired_cost)
             # pdb.set_trace()
         else:
@@ -656,6 +664,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         cost_function: Callable[[GrammarBasedState], torch.Tensor],
     ) -> Dict[int, List[torch.Tensor]]:
         batch_costs: Dict[int, List[torch.Tensor]] = defaultdict(list)
+
         for batch_index, states in final_states.items():
             for state in states:
                 cost = cost_function(state)

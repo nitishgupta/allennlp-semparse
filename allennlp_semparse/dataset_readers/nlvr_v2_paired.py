@@ -254,7 +254,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         original_charoffsets: List[Tuple[int, int]] = []
         paired_charoffsets: List[Tuple[int, int]] = []
         paired_masks: List[int] = []
-        if paired_examples is not None:
+        if paired_examples is not None and paired_examples:
             # Process paired example:
             for paired_example in paired_examples:
                 paired_identifiers.append(paired_example["identifier"])
@@ -278,6 +278,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         paired_masks_field = MetadataField(paired_masks)
         paired_sentences_fieldlist = []
         tokenized_paired_sentences = []     # needed later to convert char-offsets to token-offsets
+
         for paired_sentence in paired_sentences:
             tokenized_paired_sentence: List[Token] = self._tokenizer.tokenize(paired_sentence)
             paired_sentence_field = TextField(

@@ -244,13 +244,13 @@ def make_data(
         paired_identifiers: List[str] = paired_phrase.identifiers
         for identifier in paired_phrase.identifiers:
             instance: NlvrInstance = id2instance[identifier]
-            if instance.paired_examples is None:
-                instance.paired_examples = []
             # For this instance, sample paired instances from paired_identifiers
             # paired_ids: List[str], all_orig_charoffsets & all_orig_charoffsets: List[Tuple[int, int]]
             paired_ids, all_orig_charoffsets, all_paired_charoffsets = sample_paired_instance(
                 identifier, paired_identifiers, paired_phrase.grounded_phrases, id2instance, max_samples_per_phrase)
             if paired_ids:
+                if instance.paired_examples is None:
+                    instance.paired_examples = []
                 for paired_id, orig_charoffsets, paired_charoffsets in zip(paired_ids,
                                                                            all_orig_charoffsets,
                                                                            all_paired_charoffsets):

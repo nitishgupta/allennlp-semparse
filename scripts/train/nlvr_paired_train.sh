@@ -12,7 +12,7 @@ INCLUDE_PACKAGE=allennlp_semparse
 CONFIGFILE=training_config/nlvr_paired_parser.jsonnet
 
 # DATA PATH
-export TRAIN_DATA=./resources/data/nlvr/processed/paired_data/train_v1_P2_M3.json
+export TRAIN_DATA=./resources/data/nlvr/processed/paired_data/train_v2_P1M2.json
 export DEV_DATA=./resources/data/nlvr/processed/dev_grouped.json
 
 # HYPER-PARAMETERS
