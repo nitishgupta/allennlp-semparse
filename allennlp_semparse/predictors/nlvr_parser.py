@@ -165,6 +165,7 @@ class NlvrVisualizePredictor(NlvrParserPredictor):
             "denotations": denotations,
             "sequence_is_correct": sequence_is_correct,
             "consistent": consistent,
+            "consistent_programs": outputs["consistent_programs"]
         }
 
         output_str = json.dumps(output_dict, indent=2) + "\n"
@@ -205,6 +206,7 @@ class NlvrPredictionPredictor(NlvrVisualizePredictor):
             "denotations": denotations,
             "sequence_is_correct": sequence_is_correct,
             "consistent": consistent,
+            "consistent_programs": outputs["consistent_programs"]
         }
 
         output_str = json.dumps(output_dict) + "\n"

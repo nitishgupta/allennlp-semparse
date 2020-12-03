@@ -122,7 +122,6 @@ def get_programs_for_paired_examples(
                     "paired_tokenoffset": flat_paired_tokenoffsets[group_idx],
                     "paired_idx": grpidx2batch_paired_idx[group_idx][1],
                 }
-
                 batchidx2paired_programs[batch_idx].append(paired_program_dict)
 
     return batchidx2paired_programs

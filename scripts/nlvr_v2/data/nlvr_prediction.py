@@ -1,4 +1,4 @@
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Set
 import json
 
 
@@ -16,6 +16,7 @@ class NlvrPredictionInstance:
         self.denotations: Union[List[str], List[List[str]]] = prediction_dict.get("denotations", [])
         self.sequence_is_correct: List[bool] = prediction_dict.get("sequence_is_correct", [False])
         self.consistent: bool = prediction_dict.get("consistent", False)
+        self.consistent_programs: List[Tuple[str, float]] = prediction_dict.get("consistent_programs", None)
 
 
 def read_nlvr_predictions(predictions_jsonl: str) -> List[NlvrPredictionInstance]:
@@ -49,4 +50,22 @@ class NlvrDatasetPredictions:
 
     def compute_avg_consistency(self):
         avg_consistency = 100.0 * (float(self.num_consistent) / self.num_instances)
+        return avg_consistency
+
+    def compute_avg_consistency_for_subset(self, identifiers: Set[str]):
+        identifiers = set(identifiers)
+        subset = []
+        for instance in self.instances:
+            if instance.identifier in identifiers:
+                subset.append(instance)
+
+        num_consistent = len([
+            instance.identifier for instance in subset if instance.consistent
+        ])
+
+        # print("Computing avg. consistency for subset; given: {} found: {}".format(
+        #     len(identifiers), len(subset)
+        # ))
+
+        avg_consistency = 100.0 * (float(num_consistent) / len(subset))
         return avg_consistency

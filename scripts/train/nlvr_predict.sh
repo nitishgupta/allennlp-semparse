@@ -10,7 +10,7 @@ export CUDA=-1
 
 INCLUDE_PACKAGE=allennlp_semparse
 
-SPLIT=dev
+SPLIT=test
 export DEV_DATA=./resources/data/nlvr/processed/${SPLIT}_grouped.json
 # IID
 # ./resources/data/nlvr/processed/${SPLIT}_grouped.json
@@ -18,7 +18,7 @@ export DEV_DATA=./resources/data/nlvr/processed/${SPLIT}_grouped.json
 # ./resources/data/nlvr/comp_gen/absstr_v1/${SPLIT}.json
 
 # MODEL PATH
-SERIALIZATION_DIR=./resources/checkpoints/nlvr/pairedv2_NEWLANG_T07_P1M1/SEED_42/ERM/Iter5_MDS22
+SERIALIZATION_DIR=./resources/checkpoints/nlvr/pairedv2_NEWLANG_T07_P1M2-RE/SEED_42/ERM/Iter5_MDS22
 MODEL_TAR_GZ=${SERIALIZATION_DIR}/model.tar.gz
 
 mkdir ${SERIALIZATION_DIR}/predictions
@@ -49,9 +49,11 @@ allennlp predict --output-file ${OUTPUT_PREDICTION_PATH} \
 allennlp evaluate --output-file ${OUTPUT_METRICS_PATH} \
                   --cuda-device ${CUDA} \
                   --include-package allennlp_semparse \
+                  --overrides "{"model": {"beam_size": 10}}" \
                   ${MODEL_TAR_GZ} ${DEV_DATA}
 
 # --overrides "{"model": {"max_decoding_steps": 14}}" \
+#--overrides "{"model": {"beam_size": 10}}" \
 
 echo -e "Metrics written to: ${OUTPUT_METRICS_PATH}"
 echo -e "Predictions written to: ${OUTPUT_PREDICTION_PATH}"

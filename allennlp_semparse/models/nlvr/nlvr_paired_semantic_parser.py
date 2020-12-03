@@ -292,47 +292,50 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         if identifier is not None:
             outputs["identifier"] = identifier
 
-        # best_final_states = outputs["best_final_states"]
-        # best_action_sequences: Dict[int, List[List[int]]] = {}
-        # for batch_index, states in best_final_states.items():
-        #     best_action_sequences[batch_index] = [state.action_history[0] for state in states]
-
-        # Action-string sequence, for each program, for each instance. If no program is decoded for an instance,
-        # the corresponding instance's List[List[str]] would just be an empty []
-        batch_action_strings: List[List[List[str]]] = self._get_action_strings(
-            actions, best_action_sequences
-        )
-
-        # for i, instance_worlds in enumerate(worlds):
-        #     for world in instance_worlds:
-        #         if world is not None:
-        #             world.metadata = metadata[i]
-
-        # Denotation, for each world, for each program, for each instance. Similarly, if no program is decoded,
-        # the corresponding instance's List[List[str]] would just be an empty []
-        batch_denotations: List[List[List[str]]] = self._get_denotations(
-            batch_action_strings, worlds
-        )
-
-        batch_sequence_is_correct = None
-        if label_strings is not None:
-            # Prediction correct/incorrect, for each world, for each instance
-            batch_sequence_is_correct: List[List[bool]] = self._update_metrics(
-                action_strings=batch_action_strings, worlds=worlds, label_strings=label_strings
-            )
-
-        # if labels is not None:
-        #     # We're either training or validating.
-        #     self._update_metrics(
-        #         action_strings=batch_action_strings,
-        #         worlds=worlds,
-        #         label_strings=label_strings,
-        #         # possible_actions=actions,
-        #         # agenda_data=agenda_data,
-        #     )
-
         if not self.training:
-            # We're testing.
+            # We're testing
+            # Action-string sequence, for each program, for each instance. If no program is decoded for an instance,
+            # the corresponding instance's List[List[str]] would just be an empty []
+            batch_action_strings: List[List[List[str]]] = self._get_action_strings(
+                actions, best_action_sequences
+            )
+            # Denotation, for each world, for each program, for each instance. Similarly, if no program is decoded,
+            # the corresponding instance's List[List[str]] would just be an empty []
+            batch_denotations: List[List[List[str]]] = self._get_denotations(
+                batch_action_strings, worlds
+            )
+            outputs["best_action_strings"] = batch_action_strings
+            outputs["denotations"] = batch_denotations
+            batch_action_scores = [
+                best_action_scores[i] if i in best_action_scores else [] for i in range(batch_size)
+            ]
+            outputs["batch_action_scores"] = batch_action_scores
+
+            batch_sequence_is_correct = None
+            if label_strings is not None:
+                # Prediction correct/incorrect, for each world, for each instance
+                batch_sequence_is_correct: List[List[bool]] = self._update_metrics(
+                    action_strings=batch_action_strings, worlds=worlds, label_strings=label_strings
+                )
+                outputs["label_strings"] = label_strings
+                outputs["sequence_is_correct"] = batch_sequence_is_correct
+                # consistent_programs = []
+                # for i in range(batch_size):
+                #     cps = []
+                #     for (p, s) in zip(batch_action_strings[i], batch_action_scores[i]):
+                #         if self.is_consistent_program(p, worlds[i], label_strings[i]):
+                #             cps.append((p, s))
+                #     import pdb
+                #     pdb.set_trace()
+                #     consistent_programs.append(cps)
+
+                consistent_programs = [
+                    [(worlds[i][0].action_sequence_to_logical_form(p), s) for (p, s) in zip(batch_action_strings[i],
+                                                                                            batch_action_scores[i])
+                     if self.is_consistent_program(p, worlds[i], label_strings[i])] for i in range(batch_size)
+                ]
+                outputs["consistent_programs"] = consistent_programs
+
             if metadata is not None:
                 outputs["sentence"] = [x["sentence"] for x in metadata]
                 outputs["sentence_tokens"] = [x["sentence_tokens"] for x in metadata]
@@ -344,17 +347,11 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                     )  # type: ignore
                 else:
                     outputs["debug_info"].append([])
-            outputs["best_action_strings"] = batch_action_strings
-            outputs["denotations"] = batch_denotations
             action_mapping = {}
             for batch_index, batch_actions in enumerate(actions):
                 for action_index, action in enumerate(batch_actions):
                     action_mapping[(batch_index, action_index)] = action[0]
             outputs["action_mapping"] = action_mapping
-            if label_strings:
-                outputs["label_strings"] = label_strings
-            if batch_sequence_is_correct:
-                outputs["sequence_is_correct"] = batch_sequence_is_correct
 
         return outputs
 
@@ -445,31 +442,40 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         batch_sequence_is_correct = []
         for i in range(batch_size):
             instance_action_strings = action_strings[i]
+            instance_worlds = worlds[i]
             sequence_is_correct = [False]
+            topk_correct = False
             if instance_action_strings:
                 instance_label_strings = label_strings[i]
-                instance_worlds = worlds[i]
                 # Taking only the best sequence.
                 sequence_is_correct = self._check_denotation(
                     instance_action_strings[0], instance_label_strings, instance_worlds
                 )
+                topk_programs_correctness = [
+                    self._check_denotation(action_strings, instance_label_strings, instance_worlds)
+                    for action_strings in instance_action_strings
+                ]
+                if any(all(x) for x in topk_programs_correctness):
+                    topk_correct = True
             else:
                 # No program was decoded for this instance, therefore, mark denotation is incorrect for all worlds
-                instance_worlds = worlds[i]
                 # world can be none in case of padding
                 num_worlds = sum([1 for world in instance_worlds if world is not None])
                 sequence_is_correct = [False] * num_worlds
             for correct_in_world in sequence_is_correct:
                 self._denotation_accuracy(1 if correct_in_world else 0)
             self._consistency(1 if all(sequence_is_correct) else 0)
+            self._topk_consistency(1 if topk_correct else 0)
             batch_sequence_is_correct.append(sequence_is_correct)
         return batch_sequence_is_correct
 
     @overrides
     def get_metrics(self, reset: bool = False) -> Dict[str, float]:
+        k = self._beam_search._beam_size
         return {
             "denotation_accuracy": self._denotation_accuracy.get_metric(reset),
             "consistency": self._consistency.get_metric(reset),
+            f"top{k}_const": self._topk_consistency.get_metric(reset),
         }
 
     def _get_state_cost(
@@ -547,7 +553,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         normalized_paired_action_probs = util.masked_softmax(logprobs, None)
         # These are raw program probabilites as predicted by decoder for the original paired example. This tensor is not
         # a distribution.
-        paired_action_probs = torch.exp(logprobs)
+        # paired_action_probs = torch.exp(logprobs)
 
         paired_debug_infos: List[List[Dict]] = [p["debug_info"] for p in batchidx2paired_programs[batch_index]]
         # (start, end) both _inclusive_
@@ -599,6 +605,10 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
             # TODO(nitish): TYPE 1 - use normalized program probs and compute expected share-score
             # Within range [0, 1], 1 indicating maximum sharing between original and paired program
             share_score = normalized_paired_action_probs.dot(share_ratios)
+            # print(share_ratios)
+            # print(normalized_paired_action_probs)
+            # print()
+
             paired_cost = 1.0 - share_score
 
             # print(share_score)

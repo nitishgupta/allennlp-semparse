@@ -64,7 +64,7 @@ local mml_model = std.extVar("MML_MODEL_TAR");
   "trainer": {
     "checkpointer": {"num_serialized_models_to_keep": 1},
     "num_epochs": epochs,
-    "patience": 20,
+    "patience": 15,
     "cuda_device": cuda_device,
     "validation_metric": "+consistency",
     "optimizer": {

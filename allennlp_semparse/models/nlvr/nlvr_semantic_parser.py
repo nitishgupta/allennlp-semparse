@@ -65,6 +65,7 @@ class NlvrSemanticParser(Model):
         self._sentence_embedder = sentence_embedder
         self._denotation_accuracy = Average()
         self._consistency = Average()
+        self._topk_consistency = Average()
         self._encoder = encoder
         if dropout > 0:
             self._dropout = torch.nn.Dropout(p=dropout)
