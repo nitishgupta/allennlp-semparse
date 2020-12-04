@@ -126,8 +126,48 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         # Removing the "Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]" production from grammar
         # calling to populate productions dictionary
         _ = self.get_nonterminal_productions()
+
+        # This non-terminal is not needed; formed by currying and composing funcs we don't want those operations on
+        self._nonterminal_productions.pop("<Set[Box]:Set[Box]>")
+        self._nonterminal_productions.pop("<int:bool>")
+        self._nonterminal_productions.pop("<<Set[Object]:bool>:Set[Box]>")
+        self._nonterminal_productions.pop("<Color:bool>")
+        self._nonterminal_productions.pop("<Shape:bool>")
+        self._nonterminal_productions.pop("<Set[Box],<Set[Object]:bool>:bool>")
+        self._nonterminal_productions.pop("<Set[Box],<Set[Object]:bool>:Set[Object]>")
+        self._nonterminal_productions.pop("<<Set[Object]:bool>:Set[Object]>")
+        self._nonterminal_productions.pop("<<Set[Object]:bool>,<Set[Object]:bool>:Set[Box]>")
+        self._nonterminal_productions.pop("<<Set[Object]:bool>:bool>")
+
         self._nonterminal_productions["Set[Object]"].remove('Set[Object] -> [<Set[Object]:Set[Object]>, Set[Object]]')
 
+        self._nonterminal_productions["<Set[Box],<Set[Object]:bool>:Set[Box]>"].remove(
+            "<Set[Box],<Set[Object]:bool>:Set[Box]> -> "
+            "[*, <Set[Box]:Set[Box]>, <Set[Box],<Set[Object]:bool>:Set[Box]>]"
+        )
+
+        self._nonterminal_productions["<Set[Box]:bool>"].remove(
+            "<Set[Box]:bool> -> [*, <Set[Box]:bool>, <Set[Box]:Set[Box]>]"
+        )
+        self._nonterminal_productions["<Set[Box]:bool>"].remove(
+            "<Set[Box]:bool> -> [*, <Set[Object]:bool>, <Set[Box]:Set[Object]>]"
+        )
+        self._nonterminal_productions["<Set[Box]:bool>"].remove(
+            "<Set[Box]:bool> -> [<int,Set[Box]:bool>, int]"
+        )
+
+        self._nonterminal_productions["<Set[Box]:Set[Object]>"].remove(
+            "<Set[Box]:Set[Object]> -> [*, <Set[Box]:Set[Object]>, <Set[Box]:Set[Box]>]"
+        )
+        self._nonterminal_productions["<Set[Box]:Set[Object]>"].remove(
+            "<Set[Box]:Set[Object]> -> [*, <Set[Object]:Set[Object]>, <Set[Box]:Set[Object]>]"
+        )
+
+        self._nonterminal_productions["<<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>>"].remove(
+            "<<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>> -> "
+            "[*, <<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>>, "
+            "<<Set[Object]:Set[Object]>:<Set[Object]:Set[Object]>>]"
+        )
 
         # Mapping from terminal strings to productions that produce them.
         # Eg.: "yellow" -> "<Set[Object]:Set[Object]> -> yellow"
