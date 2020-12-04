@@ -235,9 +235,10 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         if " not " in sentence:
             agenda.append(self.terminal_productions["negate_filter"])
 
-        if " contains " in sentence or " has " in sentence:
-            agenda.append(self.terminal_productions["all_boxes"])
-            agenda.append(self.terminal_productions["box_filter"])
+        if self.terminal_productions["box_filter"] not in agenda:
+            if " contains " in sentence or " has " in sentence:
+                agenda.append(self.terminal_productions["all_boxes"])
+                agenda.append(self.terminal_productions["box_filter"])
 
         # This takes care of shapes, colors, top, bottom, big, small etc.
         for constant, production in self.terminal_productions.items():
