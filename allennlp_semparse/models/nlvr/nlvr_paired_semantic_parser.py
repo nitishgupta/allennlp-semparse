@@ -589,8 +589,17 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 for stepnum in p_relevant_decoding_steps:
                     p_relevant_actions.append(p_actions[stepnum])
                 # Score between [0, 1], ratio of original relevant actions found in paired relevant actions
-                share_ratio = float(len(self.common_elements(relevant_actions,
-                                                             p_relevant_actions)))/len(relevant_actions)
+                num_common_actions = len(self.common_elements(relevant_actions, p_relevant_actions))
+                share_ratio_precision = 0.0
+                if len(relevant_actions) > 0:
+                    share_ratio_precision = float(num_common_actions)/len(relevant_actions)
+                share_ratio_recall = 0.0
+                if len(p_relevant_actions) > 0:
+                    share_ratio_recall = float(num_common_actions)/len(p_relevant_actions)
+                share_ratio = 0.0
+                if (share_ratio_precision + share_ratio_recall) > 0.0:
+                    share_ratio = (2.0*share_ratio_precision*share_ratio_recall)/(share_ratio_precision +
+                                                                                  share_ratio_recall)
                 share_ratios[pidx] = share_ratio
                 # print(batch_worlds[0][0].action_sequence_to_logical_form(p_actions))
                 # print(p_relevant_decoding_steps)
@@ -681,13 +690,38 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 batch_costs[batch_index].append(cost)
         return batch_costs
 
+    # @staticmethod
+    # def common_elements(l1, l2):
+    #     """Returns elements in l1 that appear in l2. Multiple copies of same element are considered separately;
+    #        each copy in l1 needs to be aligned in l2 to be considered a match.
+    #        https://stackoverflow.com/a/22542432
+    #     """
+    #     return [e for e in l1 if e in l2 and (l2.pop(l2.index(e)) or True)]
+
     @staticmethod
     def common_elements(l1, l2):
         """Returns elements in l1 that appear in l2. Multiple copies of same element are considered separately;
            each copy in l1 needs to be aligned in l2 to be considered a match.
            https://stackoverflow.com/a/22542432
         """
-        return [e for e in l1 if e in l2 and (l2.pop(l2.index(e)) or True)]
+        dict1 = {}
+        for action in l1:
+            if action not in dict1:
+                dict1[action] = 0
+            dict1[action] += 1
+        dict2 = {}
+        for action in l2:
+            if action not in dict2:
+                dict2[action] = 0
+            dict2[action] += 1
+
+        common_actions = []
+        for action, count1 in dict1.items():
+            count2 = dict2.get(action, 0)
+            for i in range(min(count1, count2)):
+                common_actions.append(action)
+
+        return common_actions
 
     @staticmethod
     def is_consistent_program(action_sequence: List[str],
