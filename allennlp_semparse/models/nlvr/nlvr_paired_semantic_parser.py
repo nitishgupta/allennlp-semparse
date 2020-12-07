@@ -579,12 +579,6 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         relevant_nonterminal_actions = [x for x in relevant_actions
                                         if x not in instance_worlds[0].colornumsize_productions]
 
-        print(metadata[batch_index]["sentence"])
-
-        print(relevant_actions)
-        print(relevant_nonterminal_actions)
-        print()
-
         share_ratios = [0.0 for _ in range(num_paired_progs)]
         if relevant_actions:
             for pidx in range(num_paired_progs):
@@ -599,11 +593,6 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
 
                 p_relevant_nonterminal_actions = [x for x in p_relevant_actions
                                                   if x not in instance_worlds[0].colornumsize_productions]
-                print(metadata[batch_index]["paired_sentences"])
-                print(p_relevant_actions)
-                print(p_relevant_nonterminal_actions)
-                print()
-
                 # Score between [0, 1], ratio of original relevant actions found in paired relevant actions
                 num_common_actions = len(self.common_elements(relevant_actions, p_relevant_actions))
                 share_ratio_precision = 0.0
