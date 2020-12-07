@@ -13,14 +13,14 @@ local mml_model = std.extVar("MML_MODEL_TAR");
     "lazy": false,
     "output_agendas": false,
     "mode": "train",
-//    "max_instances": 500,
+    "max_instances": 500,
   },
   "validation_dataset_reader": {
     "type": "nlvr_v2_paired",
     "lazy": false,
     "output_agendas": false,
     "mode": "test",
-//    "max_instances": 100
+    "max_instances": 100
 },
 
   "vocabulary": {

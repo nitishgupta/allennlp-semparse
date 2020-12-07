@@ -21,7 +21,7 @@ export MDS=14
 export EPOCHS=50
 export SEED=1337
 
-export MML_MODEL_TAR=./resources/checkpoints/nlvr/pairedv1_SORT_SD_T05_P2M3/SEED_21/MML/Iter3_MDS18/model.tar.gz
+export MML_MODEL_TAR=./resources/checkpoints/nlvr/pruned/pairedv2_T07_P1M2/SEED_21/MML/Iter3_MDS18/model.tar.gz
 
 # SERIALIZATION PATH
 CHECKPOINT_ROOT=./resources/checkpoints

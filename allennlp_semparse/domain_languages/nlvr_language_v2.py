@@ -177,6 +177,14 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         for name, types in self._function_types.items():
             self.terminal_productions[name] = f"{types[0]} -> {name}"
 
+        self.colornumsize_productions = []
+        for production in self.terminal_productions.values():
+            rhs = production.split(" -> ")[1]
+            if any(x in rhs for x in allowed_constants.keys()) or any(x in rhs for x in ["blue", "black", "yellow",
+                                                                                         "triangle", "square", "circle",
+                                                                                         "small", "medium", "big"]):
+                self.colornumsize_productions.append(production)
+
         self.metadata = metadata
 
     # These first two methods are about getting an "agenda", which, given an input utterance,
