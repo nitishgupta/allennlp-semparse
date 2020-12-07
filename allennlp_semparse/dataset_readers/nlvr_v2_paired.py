@@ -253,6 +253,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
         paired_labels: List[List[str]] = []
         original_charoffsets: List[Tuple[int, int]] = []
         paired_charoffsets: List[Tuple[int, int]] = []
+        paired_nt_matches: List[bool] = []
         paired_masks: List[int] = []
         if paired_examples is not None and paired_examples:
             # Process paired example:
@@ -263,6 +264,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
                 paired_labels.append(paired_example["labels"])
                 original_charoffsets.append(paired_example["orig_charoffsets"])
                 paired_charoffsets.append(paired_example["paired_charoffsets"])
+                paired_nt_matches.append(paired_example.get("nt_match", False))
                 paired_masks.append(1)
                 self.num_paired_examples += 1
         else:
@@ -272,6 +274,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
             paired_labels.append([])
             original_charoffsets.append((-1, -1))
             paired_charoffsets.append((-1, -1))
+            paired_nt_matches.append(False)
             paired_masks.append(0)
 
         # paired_mask_field = ArrayField(np.array(paired_masks))
@@ -338,6 +341,7 @@ class NlvrV2PairedDatasetReader(DatasetReader):
             "paired_labels": paired_labels_field,
             "original_tokenoffsets": original_tokenoffsets_field,
             "paired_tokenoffsets": paired_tokenoffsets_field,
+            "paired_nt_matches": MetadataField(paired_nt_matches)
         }
         fields.update(paired_fields)
         # Even though metadata has been added to fields, since it's dict,

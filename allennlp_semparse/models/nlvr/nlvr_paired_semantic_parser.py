@@ -199,6 +199,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         paired_labels: List[List[List[str]]] = None,
         original_tokenoffsets: List[List[Tuple[int, int]]] = None,
         paired_tokenoffsets: List[List[Tuple[int, int]]] = None,
+        paired_nt_matches: List[List[bool]] = None,
         metadata: List[Dict[str, Any]] = None,
     ) -> Dict[str, torch.Tensor]:
         """
@@ -250,6 +251,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 paired_labels,
                 original_tokenoffsets,
                 paired_tokenoffsets,
+                paired_nt_matches,
                 metadata,
             )
 
@@ -563,6 +565,8 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         original_tokenoffset = original_tokenoffsets[0]
         paired_tokenoffsets: List[Tuple[int, int]] = [p["paired_tokenoffset"] for p in
                                                       batchidx2paired_programs[batch_index]]
+        paired_nt_matches: List[bool] = [p["nt_match"] for p in batchidx2paired_programs[batch_index]]
+
         num_paired_progs = len(batchidx2paired_programs[batch_index])
         # metadata: Dict = paired_examples_output["metadata"][batch_index]
 
@@ -585,6 +589,7 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
                 p_action_seq = paired_action_sequences[pidx]
                 p_actions: List[str] = [all_actions[action][0] for action in p_action_seq]
                 p_debug_info = paired_debug_infos[pidx]
+                nt_match: bool = paired_nt_matches[pidx]
                 p_relevant_decoding_steps, p_alignment_scores = self.get_relevant_decoding_steps(
                     paired_tokenoffsets[pidx], p_debug_info, threshold=paired_treshold)
                 p_relevant_actions = []
@@ -593,18 +598,25 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
 
                 p_relevant_nonterminal_actions = [x for x in p_relevant_actions
                                                   if x not in instance_worlds[0].colornumsize_productions]
-                # Score between [0, 1], ratio of original relevant actions found in paired relevant actions
-                num_common_actions = len(self.common_elements(relevant_actions, p_relevant_actions))
-                share_ratio_precision = 0.0
-                if len(relevant_actions) > 0:
-                    share_ratio_precision = float(num_common_actions)/len(relevant_actions)
-                share_ratio_recall = 0.0
-                if len(p_relevant_actions) > 0:
-                    share_ratio_recall = float(num_common_actions)/len(p_relevant_actions)
-                share_ratio = 0.0
-                if (share_ratio_precision + share_ratio_recall) > 0.0:
-                    share_ratio = (2.0*share_ratio_precision*share_ratio_recall)/(share_ratio_precision +
-                                                                                  share_ratio_recall)
+
+                if nt_match:
+                    share_ratio = self.compute_action_share_f1(relevant_nonterminal_actions,
+                                                               p_relevant_nonterminal_actions)
+                else:
+                    share_ratio = self.compute_action_share_f1(relevant_actions, p_relevant_actions)
+
+                # # Score between [0, 1], ratio of original relevant actions found in paired relevant actions
+                # num_common_actions = len(self.common_elements(relevant_actions, p_relevant_actions))
+                # share_ratio_precision = 0.0
+                # if len(relevant_actions) > 0:
+                #     share_ratio_precision = float(num_common_actions)/len(relevant_actions)
+                # share_ratio_recall = 0.0
+                # if len(p_relevant_actions) > 0:
+                #     share_ratio_recall = float(num_common_actions)/len(p_relevant_actions)
+                # share_ratio = 0.0
+                # if (share_ratio_precision + share_ratio_recall) > 0.0:
+                #     share_ratio = (2.0*share_ratio_precision*share_ratio_recall)/(share_ratio_precision +
+                #                                                                   share_ratio_recall)
                 share_ratios[pidx] = share_ratio
                 # print(batch_worlds[0][0].action_sequence_to_logical_form(p_actions))
                 # print(p_relevant_decoding_steps)
@@ -656,6 +668,20 @@ class NlvrPairedSemanticParser(NlvrSemanticParser):
         """
         return cost
 
+    @staticmethod
+    def compute_action_share_f1(orig_actions, paired_actions):
+        num_common_actions = len(NlvrPairedSemanticParser.common_elements(orig_actions, paired_actions))
+        share_ratio_precision = 0.0
+        if len(orig_actions) > 0:
+            share_ratio_precision = float(num_common_actions) / len(orig_actions)
+        share_ratio_recall = 0.0
+        if len(paired_actions) > 0:
+            share_ratio_recall = float(num_common_actions) / len(paired_actions)
+        share_f1 = 0.0
+        if (share_ratio_precision + share_ratio_recall) > 0.0:
+            share_f1 = (2.0 * share_ratio_precision * share_ratio_recall) / (share_ratio_precision +
+                                                                             share_ratio_recall)
+        return share_f1
 
     def get_relevant_decoding_steps(self,
         tokenoffsets: Tuple[int, int],

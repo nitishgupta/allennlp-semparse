@@ -18,6 +18,7 @@ def get_programs_for_paired_examples(
         paired_labels: List[List[List[str]]] = None,
         original_tokenoffsets: List[List[Tuple[int, int]]] = None,
         paired_tokenoffsets: List[List[Tuple[int, int]]] = None,
+        paired_nt_matches: List[List[bool]] = None,
         metadata: List[Dict] = None):
 
     """Start-to-end parsing of paired examples to output decoded programs.
@@ -36,6 +37,7 @@ def get_programs_for_paired_examples(
     flat_label_strings: List[List[str]] = []
     flat_original_tokenoffsets: List[Tuple[int, int]] = []
     flat_paired_tokenoffsets: List[Tuple[int, int]] = []
+    flat_nt_matches: List[bool] = []
 
     for batch_idx, masks in enumerate(paired_masks):
         for paired_idx, mask in enumerate(masks):
@@ -50,6 +52,7 @@ def get_programs_for_paired_examples(
             flat_label_strings.append(paired_labels[batch_idx][paired_idx])
             flat_original_tokenoffsets.append(original_tokenoffsets[batch_idx][paired_idx])
             flat_paired_tokenoffsets.append(paired_tokenoffsets[batch_idx][paired_idx])
+            flat_nt_matches.append(paired_nt_matches[batch_idx][paired_idx])
 
             # paired_sentences["tokens"]["tokens"] is a (batch_size, num_pairings, length) sized tensor
             # Pull out the (batch_idx, paired_idx, :) tensor and append. Unsqueeze(0) to make concat easier later
@@ -121,6 +124,7 @@ def get_programs_for_paired_examples(
                     "original_tokenoffset": flat_original_tokenoffsets[group_idx],
                     "paired_tokenoffset": flat_paired_tokenoffsets[group_idx],
                     "paired_idx": grpidx2batch_paired_idx[group_idx][1],
+                    "nt_match": flat_nt_matches[group_idx]
                 }
                 batchidx2paired_programs[batch_idx].append(paired_program_dict)
 
