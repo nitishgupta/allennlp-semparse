@@ -243,15 +243,20 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         if " not " in sentence:
             agenda.append(self.terminal_productions["negate_filter"])
 
+        if " and " in sentence:
+            agenda.append(self.terminal_productions["box_filter_and"])
+
         if self.terminal_productions["box_filter"] not in agenda:
             if " contains " in sentence or " has " in sentence:
                 agenda.append(self.terminal_productions["all_boxes"])
                 agenda.append(self.terminal_productions["box_filter"])
 
+        numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10']
+
         # This takes care of shapes, colors, top, bottom, big, small etc.
         for constant, production in self.terminal_productions.items():
             # TODO(pradeep): Deal with constant names with underscores.
-            if "top" in constant or "bottom" in constant:
+            if "top" in constant or "bottom" in constant or constant in numbers:
                 # We already dealt with top, bottom, touch_top and touch_bottom above.
                 continue
             if constant in sentence:

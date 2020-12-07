@@ -18,7 +18,7 @@ export DEV_DATA=./resources/data/nlvr/processed/${SPLIT}_grouped.json
 # ./resources/data/nlvr/comp_gen/absstr_v1/${SPLIT}.json
 
 # MODEL PATH
-SERIALIZATION_DIR=./resources/checkpoints/nlvr/pruned/pairedv10_T07_F1_P1M2/SEED_21/ERM/Iter5_MDS22
+SERIALIZATION_DIR=./resources/checkpoints/nlvr/pruned/pairedv2_T07_F1_P1M2/SEED_21/ERM/Iter5_MDS22
 MODEL_TAR_GZ=${SERIALIZATION_DIR}/model.tar.gz
 
 mkdir ${SERIALIZATION_DIR}/predictions
