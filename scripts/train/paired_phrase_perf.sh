@@ -22,10 +22,16 @@ PAIRED_V9=./resources/checkpoints/nlvr/pruned/pairedv9_T07_F1_P1M2/SEED_21/ERM/I
 
 PAIRED_V10=./resources/checkpoints/nlvr/pruned/pairedv10_T07_F1_P1M2/SEED_21/ERM/Iter5_MDS22/predictions/${SPLIT}-predictions.jsonl
 
+PAIRED_V11=./resources/checkpoints/nlvr/pruned/pairedv11_T07_F1_P1M2/SEED_42/ERM/Iter5_MDS22/predictions/${SPLIT}-predictions.jsonl
 
-VERSION=v6
+PAIRED_V11NT=./resources/checkpoints/nlvr/pruned/pairedv11_T07_F1_P1M1NT1/SEED_21/ERM/Iter5_MDS22/predictions/${SPLIT}-predictions.jsonl
+
+PAIRED_V13NT=./resources/checkpoints/nlvr/pruned/pairedv13_T07_F1_P1M1NT1/SEED_21/ERM/Iter5_MDS22/predictions/${SPLIT}-predictions.jsonl
+
+
+VERSION=v13
 PHRASES=./scripts/nlvr_v2/data/paired_phrases_${VERSION}.json
 
 
-python scripts/nlvr_v2/analysis/phrase_based_performance.py ${PHRASES} ${BASIC_ERM} ${PAIRED_V2}
+python scripts/nlvr_v2/analysis/phrase_based_performance.py ${PHRASES} ${BASIC_ERM} ${PAIRED_V13NT}
 

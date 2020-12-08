@@ -41,10 +41,11 @@ def write_candidate_programs(
     output_dicts = []
     for line in open(input_file):
         instance_id, sentence, correct_sequences = read_json_line(line)
+        if not correct_sequences:
+            continue
         candidate_logical_forms = [
             language.action_sequence_to_logical_form(a) for a in correct_sequences
         ]
-
         output_dict = {
             "id": instance_id,
             "sentence": sentence,
@@ -52,15 +53,15 @@ def write_candidate_programs(
         }
         output_dicts.append(output_dict)
 
-    print("Writing output to: {}".format(output_file))
+    print("Writing {} examples to: {}".format(len(output_dicts), output_file))
     with open(output_file, "w") as outfile:
-        json.dump(output_dicts, outfile, indent=2)
+            json.dump(output_dicts, outfile, indent=2)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input", type=str, help="NLVR data file")
-    parser.add_argument("output", type=str, help="Output txt")
+    parser.add_argument("output", type=str, help="Output json")
 
     args = parser.parse_args()
     write_candidate_programs(

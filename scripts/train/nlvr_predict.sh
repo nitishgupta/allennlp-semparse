@@ -10,7 +10,7 @@ export CUDA=-1
 
 INCLUDE_PACKAGE=allennlp_semparse
 
-SPLIT=dev
+SPLIT=test
 export DEV_DATA=./resources/data/nlvr/processed/${SPLIT}_grouped.json
 # IID
 # ./resources/data/nlvr/processed/${SPLIT}_grouped.json
@@ -18,7 +18,7 @@ export DEV_DATA=./resources/data/nlvr/processed/${SPLIT}_grouped.json
 # ./resources/data/nlvr/comp_gen/absstr_v1/${SPLIT}.json
 
 # MODEL PATH
-SERIALIZATION_DIR=./resources/checkpoints/nlvr/pruned/pairedv2_T07_F1_P1M2/SEED_21/ERM/Iter5_MDS22
+SERIALIZATION_DIR=./resources/checkpoints/nlvr/pruned/pairedv13_T07_F1_P1M1NT1/SEED_1337/ERM/Iter5_MDS22
 MODEL_TAR_GZ=${SERIALIZATION_DIR}/model.tar.gz
 
 mkdir ${SERIALIZATION_DIR}/predictions
