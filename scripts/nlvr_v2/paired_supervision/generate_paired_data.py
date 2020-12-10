@@ -372,8 +372,13 @@ def make_data(
             instance.paired_examples = full_matches[:max_samples_per_instance]
 
             if nt_matches:
-                instance_w_nt_matches += 1
-            instance.paired_examples.extend(nt_matches[:max_nt_samples_per_instance])
+                random.shuffle(nt_matches)
+                if max_nt_samples_per_instance >= 1:
+                    instance.paired_examples.extend(nt_matches[:int(max_nt_samples_per_instance)])
+                    instance_w_nt_matches += 1
+                elif random.random() <= max_nt_samples_per_instance:
+                    instance.paired_examples.extend(nt_matches[:1])
+                    instance_w_nt_matches += 1
             num_pairing_made += len(instance.paired_examples)
 
     print("Number of instances with pairings: {}".format(instance_w_pairs))
@@ -436,9 +441,10 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         '--max_nt_samples_per_instance',
-        type=int,
+        type=float,
         default=1,
-        help="Max number of paired instance per example"
+        help="Number of non-terminal matched paired examples per instance. "
+             "If <1, an example would be sampled with this probability."
     )
 
     args = parser.parse_args()

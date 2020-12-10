@@ -243,8 +243,8 @@ class NlvrLanguageFuncComposition(DomainLanguage):
         if " not " in sentence:
             agenda.append(self.terminal_productions["negate_filter"])
 
-        if " and " in sentence:
-            agenda.append(self.terminal_productions["box_filter_and"])
+        # if " and " in sentence:
+        #     agenda.append(self.terminal_productions["box_filter_and"])
 
         if self.terminal_productions["box_filter"] not in agenda:
             if " contains " in sentence or " has " in sentence:

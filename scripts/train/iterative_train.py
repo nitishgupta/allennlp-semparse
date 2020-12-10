@@ -137,9 +137,9 @@ def train_iterative_parser(full_train_json, full_dev_json, train_searchcands_jso
     tmp_dir = os.path.split(erm_config_tmpfile)[0]
     copy_file(input_file="training_config/utils.libsonnet", output_file=os.path.join(tmp_dir, "utils.libsonnet"))
 
-    if not query_yes_no("\nStart training?"):
-        print("Exiting ...\n")
-        exit()
+    # if not query_yes_no("\nStart training?"):
+    #     print("Exiting ...\n")
+    #     exit()
 
     mml_ckpt_dir = os.path.join(checkpoint_dir, "MML")
     erm_ckpt_dir = os.path.join(checkpoint_dir, "ERM")

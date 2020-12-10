@@ -43,9 +43,9 @@ def write_search_cands(train_json, all_data_search, output_filename):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("train_jsonl", type=str, help="Input data file")
-    parser.add_argument("search_data_jsonl", type=str, help="All data json w/ search candidates")
+    parser.add_argument("all_data_search_jsonl", type=str, help="All data json w/ search candidates")
     parser.add_argument("output_filename", type=str, help="train_search.json filename in the same dir as train_jsonl")
 
     args = parser.parse_args()
-    write_search_cands(train_json=args.train_jsonl, all_data_search=args.search_data_jsonl,
+    write_search_cands(train_json=args.train_jsonl, all_data_search=args.all_data_search_jsonl,
                        output_filename=args.output_filename)
