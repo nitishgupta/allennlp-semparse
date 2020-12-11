@@ -125,17 +125,29 @@ def train_iterative_parser(full_train_json, full_dev_json, train_searchcands_jso
     print("Checkpoint dir: {}".format(checkpoint_dir))
 
     print()
-    mml_config_tmpfile = tempfile.mkstemp(suffix=".jsonnet")[1]
-    copy_file(input_file=MML_config, output_file=mml_config_tmpfile)
-    print("Copied MML config ({}) to: {}".format(MML_config, mml_config_tmpfile))
-    MML_config = mml_config_tmpfile
+    # mml_config_tmpfile = tempfile.mkstemp(suffix=".jsonnet")[1]
+    mml_config_filename = os.path.split(MML_config)[1]
+    new_mml_path = os.path.join(checkpoint_dir, mml_config_filename)
+    # copy_file(input_file=MML_config, output_file=mml_config_tmpfile)
+    copy_file(input_file=MML_config, output_file=new_mml_path)
+    print("Copied MML config ({}) to: {}".format(MML_config, new_mml_path))
+    # MML_config = mml_config_tmpfile
+    MML_config = new_mml_path
 
-    erm_config_tmpfile = tempfile.mkstemp(suffix=".jsonnet")[1]
-    copy_file(input_file=ERM_config, output_file=erm_config_tmpfile)
-    print("Copied ERM config ({}) to: {}".format(ERM_config, erm_config_tmpfile))
-    ERM_config = erm_config_tmpfile
-    tmp_dir = os.path.split(erm_config_tmpfile)[0]
-    copy_file(input_file="training_config/utils.libsonnet", output_file=os.path.join(tmp_dir, "utils.libsonnet"))
+    # erm_config_tmpfile = tempfile.mkstemp(suffix=".jsonnet")[1]
+    erm_config_filename = os.path.split(ERM_config)[1]
+    new_erm_path = os.path.join(checkpoint_dir, erm_config_filename)
+    # copy_file(input_file=ERM_config, output_file=erm_config_tmpfile)
+    copy_file(input_file=ERM_config, output_file=new_erm_path)
+    # print("Copied ERM config ({}) to: {}".format(ERM_config, erm_config_tmpfile))
+    print("Copied ERM config ({}) to: {}".format(ERM_config, new_erm_path))
+    # ERM_config = erm_config_tmpfile
+    ERM_config = new_erm_path
+
+    # tmp_dir = os.path.split(erm_config_tmpfile)[0]
+    # copy_file(input_file="training_config/utils.libsonnet", output_file=os.path.join(tmp_dir, "utils.libsonnet"))
+    copy_file(input_file="training_config/utils.libsonnet", output_file=os.path.join(checkpoint_dir, "utils.libsonnet"))
+
 
     # if not query_yes_no("\nStart training?"):
     #     print("Exiting ...\n")

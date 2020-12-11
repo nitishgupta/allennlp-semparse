@@ -13,11 +13,15 @@ sys.path.insert(
 )
 
 from allennlp.common.util import JsonDict
-from allennlp.data.tokenizers import WordTokenizer
-from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
-from allennlp.semparse.contexts import TableQuestionContext
-from allennlp.semparse.domain_languages import WikiTablesLanguage
-from allennlp.semparse import ActionSpaceWalker
+from allennlp.data.tokenizers import SpacyTokenizer
+# from allennlp.data.tokenizers import WordTokenizer
+from allennlp_semparse.dataset_readers.wikitables import parse_example_line
+# from allennlp.data.dataset_readers.semantic_parsing.wikitables import util as wikitables_util
+# from allennlp.semparse.contexts import TableQuestionContext
+from allennlp_semparse.common.wikitables import TableQuestionContext
+from allennlp_semparse.domain_languages import WikiTablesLanguage
+from allennlp_semparse import ActionSpaceWalker
+# from allennlp.semparse import ActionSpaceWalker
 
 
 def search(
@@ -33,7 +37,7 @@ def search(
     print(f"Starting search with {len(data)} instances", file=sys.stderr)
     language_logger = logging.getLogger("allennlp.semparse.domain_languages.wikitables_language")
     language_logger.setLevel(logging.ERROR)
-    tokenizer = WordTokenizer()
+    tokenizer = SpacyTokenizer() # WordTokenizer()
     if output_separate_files and not os.path.exists(output_path):
         os.makedirs(output_path)
     if not output_separate_files:
@@ -136,7 +140,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     input_data = [
-        wikitables_util.parse_example_line(example_line) for example_line in open(args.data_file)
+        parse_example_line(example_line) for example_line in open(args.data_file)
     ]
     if args.num_splits == 0 or len(input_data) <= args.num_splits or not args.output_separate_files:
         search(
