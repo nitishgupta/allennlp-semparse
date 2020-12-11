@@ -71,6 +71,7 @@ def allennlp_train(serialization_dir, configfile):
     set_environ_var("OPENBLAS_NUM_THREADS", 2)
     set_environ_var("OPENMP_NUM_THREADS", 2)
     set_environ_var("MKL_NUM_THREADS", 2)
+    set_environ_var("TMPDIR", "/net/nfs2.corp/allennlp/nitishg/tmp")
     train_model_from_file(parameter_filename=configfile, serialization_dir=serialization_dir)
 
 
@@ -116,6 +117,8 @@ def train_iterative_parser(full_train_json, full_dev_json, train_searchcands_jso
     if os.path.exists(checkpoint_dir):
         print(f"CKPT Dir exists: {checkpoint_dir}")
         exit()
+
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     print()
     print("MML Config: {}".format(MML_config))
