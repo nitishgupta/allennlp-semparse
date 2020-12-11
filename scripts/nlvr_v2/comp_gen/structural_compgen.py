@@ -167,49 +167,10 @@ def get_compgen_split(all_data_jsonl, output_dir):
     write_nlvr_data(test_instances, os.path.join(output_dir, "test.json"))
 
 
-    #
-    # truncated_sorted_struc2count = [(x,y) for (x,y) in sorted_struc2count if y > 2]
-    # print(truncated_sorted_struc2count)
-    # print(len(truncated_sorted_struc2count))
-    # print()
-    #
-    # mono_sorted_struc2count = [(x, y) for (x, y) in sorted_struc2count if y == 1]
-    # print(mono_sorted_struc2count)
-    # print(len(mono_sorted_struc2count))
-    #
-    # multstructures = [structure for structure, count in structure2count.items() if count > 2]
-    # # print(multstructures)
-    # print(len(multstructures))
-    #
-
-
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("all_data_jsonl", type=str, help="Input data file")
     parser.add_argument("output_dir", type=str, help="Output dir to write train.json, dev.json & test.json")
-    # parser.add_argument(
-    #     "paired_phrases_json",
-    #     type=str,
-    #     help="Input file containing paired phrases",
-    # )
-    # parser.add_argument(
-    #     "output_jsonl",
-    #     type=str,
-    #     help="Path to archived model.tar.gz to use for decoding",
-    # )
-    # parser.add_argument(
-    #     '--max_samples_per_phrase',
-    #     type=int,
-    #     default=1,
-    #     help="For each grounded phrase, sample these many paired instances per instance"
-    # )
-    # parser.add_argument(
-    #     '--max_samples_per_instance',
-    #     type=int,
-    #     default=1,
-    #     help="Max number of paired instance per example"
-    # )
 
     args = parser.parse_args()
     get_compgen_split(all_data_jsonl=args.all_data_jsonl, output_dir=args.output_dir)

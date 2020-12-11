@@ -128,7 +128,6 @@ python scripts/nlvr_v2/comp_gen/search_cands.py \
     ./resources/data/nlvr/processed/agendav6_SORT_ML11_SD/all_data.json \
     train_search_NEWLANG.json
 ```
-
 **Paired examples**
 Same as before, generate data with paired examples using `generate_paired_data.py`
 ```
@@ -139,6 +138,38 @@ python scripts/nlvr_v2/paired_supervision/generate_paired_data.py \
     --max_samples_per_phrase 1 \
     --max_samples_per_instance 1
 ```
+
+### Attribute pair v1
+**Splitting data** 
+Given abstract paired phrases, sample a attribute value combination and put all 
+examples with those phrases in test.
+```
+python scripts/nlvr_v2/comp_gen/attrpair_compgen.py \
+    ./resources/data/nlvr/processed/all_data.json \
+    ./scripts/nlvr_v2/data/paired_phrases_v13.json \
+    ./resources/data/nlvr/comp_gen/attrpair
+```
+
+**Search candidates**
+Get search-candidates for train examples in this split
+```
+python scripts/nlvr_v2/comp_gen/search_cands.py \
+    ./resources/data/nlvr/comp_gen/attrpair/train.json \
+    ./resources/data/nlvr/processed/agenda_PL_ML11/all_data.json \
+    train_search.json
+```
+
+**Paired examples**
+Generate paired examples; example below creates a version where instances are 
+also paired with examples such that they only contain non-terminal matching.
+```
+python ./scripts/nlvr_v2/paired_supervision/generate_paired_data.py \
+    ./resources/data/nlvr/comp_gen/attrpair/train.json \
+    ./scripts/nlvr_v2/data/paired_phrases_v13.json \
+    ./resources/data/nlvr/comp_gen/attrpair/train_v13_P1M1NT1.json \
+    --add-nt-matches
+```
+
 
 **Iterative parser training**
 Same as before, run `iterative_train.py` with appropriate input arguments:

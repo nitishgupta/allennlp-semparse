@@ -8,15 +8,15 @@ export MKL_NUM_THREADS=1
 
 export CUDA=-1
 
-TRAIN_SEARCH_JSON=./resources/data/nlvr/processed/agenda_PL_ML11/train_grouped.json
+TRAIN_SEARCH_JSON=./resources/data/nlvr/comp_gen/absstr_v1/train_search.json
 
-TRAIN_ERM_JSON=./resources/data/nlvr/processed/paired_data/train_v13_P1M1.json
+TRAIN_ERM_JSON=./resources/data/nlvr/comp_gen/absstr_v1/train_v13_P1M1NT1.json
 
-DEV_JSON=./resources/data/nlvr/processed/dev_grouped.json
+DEV_JSON=./resources/data/nlvr/comp_gen/absstr_v1/dev.json
 
-CKPT_ROOT=/tmp/v13P1M1
+CKPT_ROOT=./resources/checkpoints/nlvr/absstr_v1/pairedv13_P1M1NT1
 
-for SEED in 21 42 1337 15 17
+for SEED in 21 42 1337 5 14
 do
   python scripts/train/iterative_train.py \
     --train_search_json ${TRAIN_SEARCH_JSON} \
