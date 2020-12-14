@@ -6,7 +6,7 @@ import copy
 import argparse
 import random
 
-random.seed(42)
+random.seed(21)
 
 sys.path.insert(
     0,
@@ -96,8 +96,6 @@ def sample_dev_and_test_structures(structure2count, dev_target, test_target):
             remaining_structures.remove(sample_struct)
 
     return dev_count, dev_structures, test_count, test_structures
-
-
 
 
 def get_compgen_split(all_data_jsonl, output_dir):

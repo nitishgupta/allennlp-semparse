@@ -69,7 +69,7 @@ local mml_model = std.extVar("MML_MODEL_TAR");
     "validation_metric": "+consistency",
     "optimizer": {
       "type": "adam",
-      "lr": 0.001
+      "lr": 0.0005
     }
   },
 

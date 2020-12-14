@@ -115,32 +115,14 @@ def MannWhitney(data_A, data_B):
     return pval
 
 
-##############################################################
-def main():
-    if len(sys.argv) < 3:
-        print("Not enough arguments\n")
-        sys.exit()
-
-    filename_A = sys.argv[1]    # scores from algorithm A
-    filename_B = sys.argv[2]    # scores from algorithm B
-    alpha = float(sys.argv[3])        # significance level of statistical test
-
-    with open(filename_A) as f:
-        data_A = f.read().splitlines()
-
-    with open(filename_B) as f:
-        data_B = f.read().splitlines()
-
-    data_A = list(map(float, data_A))
-    data_B = list(map(float, data_B))
-
+def perform_computations(data_A, data_B, alpha):
     buildOrigCDFs(data_A, data_B)
 
     # constants
     dp = 0.005  # differential of the variable p - for integral calculations
-    N = 1000    # num of samples from F for sigma estimate
-    M = 1000    # num of samples from G for sigma estimate
-    B = 1000    # bootstrap iterations for sigma estimate
+    N = 1000  # num of samples from F for sigma estimate
+    M = 1000  # num of samples from G for sigma estimate
+    B = 1000  # bootstrap iterations for sigma estimate
 
     # calculate the epsilon quotient
     eps_FnGm = epsilon(dp)
@@ -166,7 +148,7 @@ def main():
 
     sigma = np.std(samples)
 
-    min_epsilon = min(max(eps_FnGm - (1/const) * sigma * normal.ppf(alpha), 0.0), 1.0)
+    min_epsilon = min(max(eps_FnGm - (1 / const) * sigma * normal.ppf(alpha), 0.0), 1.0)
     print("The minimal epsilon for which Algorithm A is almost "
           "stochastically greater than algorithm B is ", min_epsilon)
     if min_epsilon <= 0.5 and min_epsilon > 0.0:
@@ -179,8 +161,31 @@ def main():
         print("since epsilon > 0.5 we will claim that A "
               "is not better than B with significance level alpha=", alpha)
 
+
 #     print(MannWhitney(data_A, data_B)<alpha)
 #     COS(data_A, data_B)
+
+
+##############################################################
+def main():
+    if len(sys.argv) < 3:
+        print("Not enough arguments\n")
+        sys.exit()
+
+    filename_A = sys.argv[1]    # scores from algorithm A
+    filename_B = sys.argv[2]    # scores from algorithm B
+    alpha = float(sys.argv[3])        # significance level of statistical test
+
+    with open(filename_A) as f:
+        data_A = f.read().splitlines()
+
+    with open(filename_B) as f:
+        data_B = f.read().splitlines()
+
+    data_A = list(map(float, data_A))
+    data_B = list(map(float, data_B))
+
+
 
 
 if __name__ == "__main__":
