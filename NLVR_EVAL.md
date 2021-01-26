@@ -30,6 +30,10 @@ cd ../..
 Copy hidden test data into `resources/data/`
 
 ## Best model eval
+Run eval for modelA and modelB. 
+Each command should create a corresponding `model{A,B}-test-p-metrics.txt` in the `resources/checkpoints` directory.
+
+Will need to change `test-p` to `test-h` (or something) for the hidden test set.
 ```
 # Model A
 bash ./scripts/nlvr_eval/run_best_eval.sh \
@@ -48,6 +52,7 @@ bash ./scripts/nlvr_eval/run_best_eval.sh \
 
 
 ## All models eval
+Will need to change `test-p` to `test-h` (or something) for the hidden test set.
 ```
 # Model A
 bash ./scripts/nlvr_eval/run_all_eval.sh \
@@ -63,8 +68,3 @@ bash ./scripts/nlvr_eval/run_all_eval.sh \
   test-p \
   test-p-metrics
 ```
-
-
-
-
-
