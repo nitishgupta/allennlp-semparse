@@ -12,27 +12,24 @@ pip install -r requirements.txt
 ```
 git clone https://github.com/nitishgupta/allennlp-semparse.git
 cd allennlp_semparse
-git pull origin nlvr-v2
-git checkout nlvr-v2
+git pull origin nlvr-eval
+git checkout nlvr-eval
 ```
 
-## Resources
-
+## Untar models
 ```
-mkdir -p resources/data
-mkdir -p resources/checkpoints
-
-cp ${TEST-P-JSON} ./resources/data
-cp ${TEST-H-JSON} ./resources/data
-
-# Put the models.tar.gz in ./resources/checkpoints an untar
 # This should create 
 # files: modelA_best.tar.gz / modelB_best.tar.gz
-# dirs: all_modelA and all_modelB 
+# dirs: all_modelA and all_modelB
+cd resources/checkpoints
 tar -xvzf models.tar.gz
+cd ../..
 ```
 
-## Best models
+## Copy Test data
+Copy hidden test data into `resources/data/`
+
+## Best model eval
 ```
 # Model A
 bash ./scripts/nlvr_eval/run_best_eval.sh \
@@ -50,7 +47,7 @@ bash ./scripts/nlvr_eval/run_best_eval.sh \
 ```
 
 
-## Run all models
+## All models eval
 ```
 # Model A
 bash ./scripts/nlvr_eval/run_all_eval.sh \
