@@ -37,7 +37,7 @@ do
 done
 
 #### Example command ####
-# bash ./scripts/nlvr_eval/run_best_eval.sh \
+# bash ./scripts/nlvr_eval/run_all_eval.sh \
 #   ./resources/data/test-p.json \
 #   ./resources/checkpoints/nlvr/final_ckpts/all_modelA \
 #   test-p \
