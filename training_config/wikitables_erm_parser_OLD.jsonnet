@@ -1,39 +1,28 @@
 // The Wikitables data is available at https://ppasupat.github.io/WikiTableQuestions/
-local utils = import 'utils.libsonnet';
-
-local train_data = std.extVar("TRAIN_DATA");
-local dev_data = std.extVar("DEV_DATA");
-
-local tables_dir = std.extVar("TABLES_DIR");
-
-local mml_model = std.extVar("MML_MODEL_TAR");
-
-local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
-
 {
+  "random_seed": 4536,
+  "numpy_seed": 9834,
+  "pytorch_seed": 953,
   "dataset_reader": {
     "type": "wikitables",
     "lazy": false,
     "output_agendas": true,
-    "tables_directory": tables_dir,
-    "keep_if_no_logical_forms": true,
-//    "max_instances": 200
+    "tables_directory": "/wikitables_tagged/",
+    "keep_if_no_logical_forms": true
   },
   "vocabulary": {
     "min_count": {"tokens": 3},
     "tokens_to_add": {"tokens": ["-1"]}
   },
-  "train_data_path": train_data,
-  "validation_data_path": dev_data,
+  "train_data_path": "/wikitables_raw_data/random-split-1-train.examples",
+  "validation_data_path": "/wikitables_raw_data/random-split-1-dev.examples",
   "model": {
     "type": "wikitables_erm_parser",
     "question_embedder": {
-      "token_embedders": {
-        "tokens": {
-          "type": "embedding",
-          "embedding_dim": 200,
-          "trainable": true
-        }
+      "tokens": {
+        "type": "embedding",
+        "embedding_dim": 200,
+        "trainable": true
       }
     },
     "action_embedding_dim": 100,
@@ -50,8 +39,8 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
       "averaged": true
     },
     "checklist_cost_weight": 0.2,
-    "max_decoding_steps": maximum_decoding_steps,
-    "decoder_beam_size": 20,
+    "max_decoding_steps": 18,
+    "decoder_beam_size": 50,
     "decoder_num_finished_states": 100,
     "attention": {
       "type": "bilinear",
@@ -59,19 +48,14 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
       "matrix_dim": 200
     },
     "dropout": 0.5,
-    "mml_model_file": mml_model
+    "mml_model_file": "/mml_model/model.tar.gz"
   },
-
-  "data_loader": {
-    "batch_sampler": {
-      "type": "bucket",
-      "sorting_keys": ["question"],
-      "batch_size": 10
-    }
+  "iterator": {
+    "type": "bucket",
+    "padding_noise": 0.0,
+    "batch_size" : 10
   },
-
   "trainer": {
-    "checkpointer": {"num_serialized_models_to_keep": 1},
     "num_epochs": 30,
     "patience": 5,
     "validation_metric": "+denotation_acc",
@@ -80,9 +64,5 @@ local maximum_decoding_steps = utils.parse_number(std.extVar("MDS"));
       "type": "sgd",
       "lr": 0.01
     }
-  },
-
-  "random_seed": 4536,
-  "numpy_seed": 9834,
-  "pytorch_seed": 953
+  }
 }

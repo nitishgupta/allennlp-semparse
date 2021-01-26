@@ -47,27 +47,31 @@ Using this, we can automatically find paired examples in the training data using
 ```
 python scripts/nlvr_v2/paired_supervision/generate_paired_data.py \
     resources/data/nlvr/processed/train_grouped.json \
-    scripts/nlvr_v2/data/paired_phrases_v1.json \
-    resources/data/nlvr/processed/paired_data/train_v1.json
+    scripts/nlvr_v2/data/paired_phrases_v13.json \
+    resources/data/nlvr/processed/paired_data/train_v13_P1M2NT1.json \
+    --max_samples_per_phrase 1 \    # P
+    --max_samples_per_instance 2 \  # M
+    --add-nt-matches \
+    --max_nt_samples_per_instance 1 # NT
 ```
+
 All examples from the input are written; instances for which a paired example is found,
 an additional field `paired_example` is added containing info about the paired instance.
 
-The output can be used with a ERM parser that does not require candidate programs  
+The output can be used with a ERM parser that does not require candidate programs
 
-Note: 
-1. Currently, we only limit to a single paired example per instance.
-2. Candidate-programs --- We do write the candidate programs (`correct_sequences` field) 
+Note (maybe outdated): 
+Candidate-programs --- We do write the candidate programs (`correct_sequences` field) 
 from the input to the output as well, in the anticipation that we could use some paired loss with MML parser.
  
 ## Iterative Parser
 
 **Basic-erm** training:
 1. Uses `training_config/nlvr_paired_parser.jsonnet`, which uses the `nlvr_v2_paired` reader 
-2. `train_json` should contain paired_examples
+2. `train_json` should be vanilla
 ```
 python scripts/train/iterative_train.py \
-    --train_search_json ./resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
+    --train_search_json ./resources/data/nlvr/processed/agenda_PL_ML11/train_grouped.json \
     --train_json ./resources/data/nlvr/processed/train_grouped.json \
     --erm_model paired \
     --ckpt_root ./resources/checkpoints/nlvr/pairedv1_SORT_01 \
@@ -76,15 +80,19 @@ python scripts/train/iterative_train.py \
 
 **Paired-erm** training:
 1. Uses `training_config/nlvr_paired_parser.jsonnet`, which uses the `nlvr_v2_paired` reader
-2. `train_json` should be vanilla
+2. `train_json` should contain paired_examples
 ```
 python scripts/train/iterative_train.py \
-    --train_search_json ./resources/data/nlvr/processed/agendav6_SORT_ML11/train_grouped.json \
+    --train_search_json ./resources/data/nlvr/processed/agenda_PL_ML11/train_grouped.json \
     --train_json  ./resources/data/nlvr/processed/paired_data/train_v1.json \
     --erm_model paired \
     --ckpt_root ./resources/checkpoints/nlvr/pairedv1_SORT_01 \
     --seed 1337
 ```
+
+**SEED sweep** `bash scripts/train/iterative_train_sweep.sh` -- can be used for both basic and paired training by giving
+appropriate training data
+
 
 **Coverage-erm** training:
 1. Uses `training_config/nlvr_coverage_parser.jsonnet`, which uses the `nlvr_v2` reader and a different model 

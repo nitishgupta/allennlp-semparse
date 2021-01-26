@@ -135,8 +135,9 @@ class WikiTablesDatasetReader(DatasetReader):
         use_table_for_vocab: bool = False,
         max_table_tokens: int = None,
         output_agendas: bool = False,
+        **kwargs,
     ) -> None:
-        super().__init__(lazy=lazy)
+        super().__init__(lazy=lazy, **kwargs)
         self._tables_directory = tables_directory
         self._offline_logical_forms_directory = offline_logical_forms_directory
         self._max_offline_logical_forms = max_offline_logical_forms
@@ -196,7 +197,7 @@ class WikiTablesDatasetReader(DatasetReader):
                         self._offline_logical_forms_directory, parsed_info["id"] + ".gz"
                     )
                     try:
-                        print(logical_forms_filename)
+                        # print(logical_forms_filename)
                         logical_forms_file = gzip.open(logical_forms_filename)
                         logical_forms = []
                         for logical_form_line in logical_forms_file:
@@ -218,6 +219,7 @@ class WikiTablesDatasetReader(DatasetReader):
                     table_lines=table_lines,
                     target_values=parsed_info["target_values"],
                     offline_search_output=logical_forms,
+                    table_filename=parsed_info["table_filename"],
                 )
                 if instance is not None:
                     num_instances += 1
@@ -235,6 +237,7 @@ class WikiTablesDatasetReader(DatasetReader):
         table_lines: List[List[str]],
         target_values: List[str] = None,
         offline_search_output: List[str] = None,
+        table_filename: str = None,
     ) -> Instance:
         """
         Reads text inputs and makes an instance. We pass the ``table_lines`` to ``TableQuestionContext``, and that
@@ -255,7 +258,12 @@ class WikiTablesDatasetReader(DatasetReader):
         """
         tokenized_question = self._tokenizer.tokenize(question.lower())
         question_field = TextField(tokenized_question, self._question_token_indexers)
-        metadata: Dict[str, Any] = {"question_tokens": [x.text for x in tokenized_question]}
+        metadata: Dict[str, Any] = {
+            "question_tokens": [x.text for x in tokenized_question],
+            "question": question,
+            "table_filename": table_filename,
+
+        }
         table_context = TableQuestionContext.read_from_lines(table_lines, tokenized_question)
         world = WikiTablesLanguage(table_context)
         world_field = MetadataField(world)

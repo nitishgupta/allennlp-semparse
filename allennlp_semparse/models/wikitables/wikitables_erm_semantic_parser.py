@@ -298,13 +298,16 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
             debug_info=None,
         )
 
-        if target_values is not None:
-            logger.warning(f"TARGET VALUES: {target_values}")
+        # if target_values is not None:
+        if self.training and target_values is not None:
+            # logger.warning(f"TARGET VALUES: {target_values}")
             trainer_outputs = self._decoder_trainer.decode(  # type: ignore
                 initial_state, self._decoder_step, partial(self._get_state_cost, world)
             )
             outputs.update(trainer_outputs)
-        else:
+
+        if not self.training:
+        # else:
             initial_state.debug_info = [[] for _ in range(batch_size)]
             batch_size = len(actions)
             agenda_indices = [actions_[:, 0].cpu().data for actions_ in agenda]
@@ -342,7 +345,6 @@ class WikiTablesErmSemanticParser(WikiTablesSemanticParser):
                         # will be 0, not 1.
                         in_agenda_ratio = sum(actions_in_agenda) / len(actions_in_agenda)
                 self._agenda_coverage(in_agenda_ratio)
-
             self._compute_validation_outputs(
                 actions, best_final_states, world, target_values, metadata, outputs
             )

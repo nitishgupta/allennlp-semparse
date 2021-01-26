@@ -1,4 +1,5 @@
 from overrides import overrides
+import json
 import torch
 
 from allennlp.common.util import JsonDict
@@ -90,3 +91,26 @@ class WikiTablesParserPredictor(Predictor):
         self._model._beam_search = original_beam_search
 
         return results
+
+@Predictor.register("wtq-parser-visualize")
+class WTQVisualizePredictor(Predictor):
+    """Predictor for 'wikitables_erm_parser' """
+    @overrides
+    def dump_line(self, outputs: JsonDict) -> str:
+        question = outputs["question"]
+        table_filename = outputs["table_filename"]
+        logical_form = outputs["logical_form"]
+        answer = outputs["answer"]
+        targets = outputs["targets"]
+
+        output_dict = {
+            "question": question,
+            "table_filename": table_filename,
+            "logical_form": logical_form,
+            "answer": answer,
+            "targets": targets,
+        }
+
+        output_str = json.dumps(output_dict, indent=2) + "\n"
+
+        return output_str

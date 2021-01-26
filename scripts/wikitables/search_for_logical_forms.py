@@ -38,11 +38,13 @@ def search(
     language_logger = logging.getLogger("allennlp.semparse.domain_languages.wikitables_language")
     language_logger.setLevel(logging.ERROR)
     tokenizer = SpacyTokenizer() # WordTokenizer()
+    num_instances, num_instances_w_lf = 0, 0
     if output_separate_files and not os.path.exists(output_path):
         os.makedirs(output_path)
     if not output_separate_files:
         output_file_pointer = open(output_path, "w")
     for instance_data in data:
+        num_instances += 1
         utterance = instance_data["question"]
         question_id = instance_data["id"]
         if utterance.startswith('"') and utterance.endswith('"'):
@@ -67,6 +69,8 @@ def search(
         for logical_form in all_logical_forms:
             if world.evaluate_logical_form(logical_form, target_list):
                 correct_logical_forms.append(logical_form)
+        if correct_logical_forms:
+            num_instances_w_lf += 1
         if output_separate_files and correct_logical_forms:
             with gzip.open(f"{output_path}/{question_id}.gz", "wt") as output_file_pointer:
                 for logical_form in correct_logical_forms:
@@ -82,6 +86,8 @@ def search(
             print(file=output_file_pointer)
     if not output_separate_files:
         output_file_pointer.close()
+
+    print("\nNum instances: {}  w/ lfs: {}".format(num_instances, num_instances_w_lf))
 
 
 if __name__ == "__main__":

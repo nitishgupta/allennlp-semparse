@@ -105,6 +105,13 @@ def get_dev_and_test_metrics(checkpoint_dir):
     return dev_con, dev_den, test_con, test_den
 
 
+def print_metrics(cons, denacc):
+    print("Consistencies: {}".format(cons))
+    print("Average consistency: {} \t std: {}".format(get_average(cons), numpy.std(cons)))
+    print("Denotation Acc: {}".format(denacc))
+    print("Average Deno Acc: {} \t std: {}".format(get_average(denacc), numpy.std(denacc)))
+
+
 def print_iterative_training_metrics(checkpoint_dir, ckptdir_baseline, all_max_decoding_steps=[12, 14, 16, 18, 20, 22]):
     """Iteratively train a parer by alternating between MML and ERM parsers.
 
@@ -125,12 +132,10 @@ def print_iterative_training_metrics(checkpoint_dir, ckptdir_baseline, all_max_d
     print("Reading dev and test metrics ... ")
     dev_cons, dev_devacc, test_cons, test_devacc = get_dev_and_test_metrics(checkpoint_dir)
     print("Dev metrics: ")
-    print("Consistencies: {}".format(dev_cons))
-    print("Average consistency: {} \t std: {}".format(get_average(dev_cons), numpy.std(dev_cons)))
+    print_metrics(dev_cons, dev_devacc)
 
     print("\nTest metrics: ")
-    print("Consistencies: {}".format(test_cons))
-    print("Average consistency: {} \t std: {}".format(get_average(test_cons), numpy.std(test_cons)))
+    print_metrics(test_cons, test_devacc)
 
     if ckptdir_baseline is None:
         return
@@ -138,6 +143,10 @@ def print_iterative_training_metrics(checkpoint_dir, ckptdir_baseline, all_max_d
     print("\nCKPT Baseline: {}".format(ckptdir_baseline))
     print("Reading dev and test metrics ... ")
     base_dev_cons, base_dev_denacc, base_test_cons, base_test_devacc = get_dev_and_test_metrics(ckptdir_baseline)
+    print("\nBaseline Dev metrics: ")
+    print_metrics(base_dev_cons, base_dev_denacc)
+    print("\nBaseline Test metrics: ")
+    print_metrics(base_test_cons, base_test_devacc)
 
     print("\n\nStatistical significance tests ...")
 

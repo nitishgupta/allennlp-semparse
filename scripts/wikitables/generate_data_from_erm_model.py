@@ -10,9 +10,10 @@ sys.path.insert(
     0, os.path.dirname(os.path.dirname(os.path.abspath(os.path.join(__file__, os.pardir))))
 )
 
-from allennlp.data.dataset_readers import WikiTablesDatasetReader
-from allennlp.data.dataset_readers.semantic_parsing.wikitables import util
+from allennlp_semparse.dataset_readers import WikiTablesDatasetReader
+from allennlp_semparse.dataset_readers.wikitables import parse_example_line
 from allennlp.models.archival import load_archive
+from allennlp_semparse.models.wikitables.wikitables_erm_semantic_parser import WikiTablesErmSemanticParser
 
 
 def make_data(
@@ -34,9 +35,10 @@ def make_data(
     model.training = False
     model._decoder_trainer._max_num_decoded_sequences = 100
     for instance, example_line in zip(dataset, input_lines):
+        del instance.fields['target_values']
         outputs = model.forward_on_instance(instance)
         world = instance.fields["world"].metadata
-        parsed_info = util.parse_example_line(example_line)
+        parsed_info = parse_example_line(example_line)
         example_id = parsed_info["id"]
         target_list = parsed_info["target_values"]
         logical_forms = outputs["logical_form"]
@@ -47,7 +49,7 @@ def make_data(
                 if len(correct_logical_forms) >= num_logical_forms:
                     break
         num_found = len(correct_logical_forms)
-        print(f"{num_found} found for {example_id}")
+        # print(f"{num_found} found for {example_id}")
         if num_found == 0:
             continue
         if not os.path.exists(output_dir):
@@ -72,7 +74,7 @@ if __name__ == "__main__":
         type=int,
         dest="num_logical_forms",
         help="Number of logical forms to output",
-        default=10,
+        default=20,
     )
     args = argparser.parse_args()
     make_data(

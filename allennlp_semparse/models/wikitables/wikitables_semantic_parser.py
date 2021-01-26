@@ -738,6 +738,9 @@ class WikiTablesSemanticParser(Model):
 
         if metadata is not None:
             outputs["question_tokens"] = [x["question_tokens"] for x in metadata]
+            outputs["question"] = [x["question"] for x in metadata]
+            outputs["table_filename"] = [x["table_filename"] for x in metadata]
+            outputs["targets"] = target_list
 
     @overrides
     def make_output_human_readable(
