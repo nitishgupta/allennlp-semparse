@@ -39,6 +39,6 @@ done
 #### Example command ####
 # bash ./scripts/nlvr_eval/run_all_eval.sh \
 #   ./resources/data/test-p.json \
-#   ./resources/checkpoints/nlvr/final_ckpts/all_modelA \
+#   ./resources/checkpoints/all_modelA \
 #   test-p \
 #   test-p-metrics

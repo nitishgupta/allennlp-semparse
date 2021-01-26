@@ -33,6 +33,6 @@ echo -e "Metrics written to: ${METRICS_OUTPUT}"
 #### Example command ####
 # bash ./scripts/nlvr_eval/run_best_eval.sh \
 #   ./resources/data/test-p.json \
-#   ./resources/checkpoints/nlvr/final_ckpts/modelB_best.tar.gz \
-#   ./resources/checkpoints/nlvr/final_ckpts/modelB-test-p.csv \
-#   ./resources/checkpoints/nlvr/final_ckpts/modelB-test-p-metrics.txt
+#   ./resources/checkpoints/modelB_best.tar.gz \
+#   ./resources/checkpoints/modelB-test-p.csv \
+#   ./resources/checkpoints/modelB-test-p-metrics.txt
